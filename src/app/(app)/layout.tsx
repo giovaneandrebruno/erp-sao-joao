@@ -6,7 +6,7 @@ import { sair } from "../login/actions";
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="print:hidden border-white/[0.06] md:w-64 md:shrink-0 md:border-r">
+      <aside className="lateral print:hidden md:w-64 md:shrink-0">
         <div className="flex flex-col gap-8 px-5 py-6 md:sticky md:top-0 md:h-screen md:overflow-y-auto">
           <Marca />
           <Suspense fallback={null}><Menu /></Suspense>

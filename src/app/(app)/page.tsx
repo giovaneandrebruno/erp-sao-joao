@@ -40,14 +40,14 @@ export default async function PainelPage() {
   ];
 
   const [destaque, ...resto] = cards;
-  const lista = "divide-y divide-white/[0.05] text-sm";
+  const lista = "divide-y divide-stone-100 text-sm";
 
   return (
     <>
       <Titulo sub={agoraTexto()}>Painel</Titulo>
       <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Link href={destaque.href} className="borda-gradiente group relative overflow-hidden rounded-3xl p-8 sm:col-span-2 lg:row-span-2">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violeta/30 blur-3xl transition group-hover:bg-ciano/30" />
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violeta/15 blur-3xl transition group-hover:bg-ciano/20" />
           <div className="relative flex h-full flex-col justify-between gap-10">
             <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">{destaque.rotulo}</div>
             <div>

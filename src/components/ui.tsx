@@ -14,9 +14,9 @@ export function Titulo({ children, acao, sub }: { children: ReactNode; acao?: Re
 }
 
 const PRIMARIO =
-  "rounded-full bg-gradient-to-r from-violeta to-ciano px-5 py-2 text-sm font-semibold text-black shadow-[0_0_24px_-6px_rgb(124_92_255/0.7)] transition hover:brightness-110 hover:shadow-[0_0_32px_-4px_rgb(0_229_255/0.6)] disabled:opacity-50";
+  "rounded-full bg-gradient-to-r from-violeta to-ciano px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgb(108_71_255/0.7)] transition hover:brightness-110 hover:shadow-[0_10px_24px_-6px_rgb(0_178_214/0.6)] disabled:opacity-50";
 const SECUNDARIO =
-  "rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-stone-800 transition hover:border-white/20 hover:bg-white/[0.08]";
+  "rounded-full border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-800 transition hover:border-violeta/40 hover:text-violeta";
 
 export function BotaoLink({ href, children, variante = "primario" }: { href: string; children: ReactNode; variante?: "primario" | "secundario" }) {
   return (
@@ -28,7 +28,7 @@ export function BotaoLink({ href, children, variante = "primario" }: { href: str
 
 export function Botao({ children, variante = "primario", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variante?: "primario" | "secundario" | "perigo" }) {
   const cls =
-    variante === "primario" ? PRIMARIO : variante === "secundario" ? SECUNDARIO : "rounded-full bg-rosa px-5 py-2 text-sm font-semibold text-black hover:brightness-110";
+    variante === "primario" ? PRIMARIO : variante === "secundario" ? SECUNDARIO : "rounded-full bg-rosa px-5 py-2 text-sm font-semibold text-white hover:brightness-110";
   return (
     <button {...props} className={`${cls} ${props.className ?? ""}`}>
       {children}
@@ -46,7 +46,7 @@ export function Campo({ rotulo, children, className = "" }: { rotulo: string; ch
 }
 
 export const inputCls =
-  "rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 transition focus:border-violeta/60 focus:bg-white/[0.05] focus:outline-none focus:ring-4 focus:ring-violeta/15 disabled:opacity-60 [&>option]:bg-stone-100";
+  "rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 transition focus:border-violeta/60 focus:bg-white focus:outline-none focus:ring-4 focus:ring-violeta/15 disabled:opacity-60";
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`vidro rounded-2xl p-6 ${className}`}>{children}</div>;
@@ -57,13 +57,13 @@ export function Tabela({ cabecalho, children, vazio }: { cabecalho: string[]; ch
     <div className="vidro overflow-x-auto rounded-2xl">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-white/[0.06]">
+          <tr className="border-b border-stone-200/70">
             {cabecalho.map((c, i) => (
               <th key={`${c}-${i}`} className="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-stone-500">{c}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/[0.04] [&_td]:px-5 [&_tr]:transition-colors [&_tr:hover]:bg-white/[0.02]">{children}</tbody>
+        <tbody className="divide-y divide-stone-100 [&_td]:px-5 [&_tr]:transition-colors [&_tr:hover]:bg-stone-50">{children}</tbody>
       </table>
       {vazio && <p className="p-8 text-center text-sm text-stone-400">Nada por aqui ainda.</p>}
     </div>
@@ -71,11 +71,11 @@ export function Tabela({ cabecalho, children, vazio }: { cabecalho: string[]; ch
 }
 
 const CORES_SELO = {
-  stone: "bg-white/[0.06] text-stone-600 ring-white/10",
-  amber: "bg-violeta/10 text-madeira-800 ring-violeta/30",
+  stone: "bg-stone-100 text-stone-600 ring-stone-200",
+  amber: "bg-violeta/10 text-violeta ring-violeta/25",
   green: "bg-neon/10 text-neon ring-neon/25",
   red: "bg-rosa/10 text-rosa ring-rosa/30",
-  blue: "bg-ciano/10 text-ciano ring-ciano/25",
+  blue: "bg-ciano/10 text-[#0089a8] ring-ciano/30",
 };
 
 export function Selo({ children, cor = "stone" }: { children: ReactNode; cor?: keyof typeof CORES_SELO }) {
@@ -105,7 +105,7 @@ export function Indicador({ rotulo, valor, sub, cor }: { rotulo: string; valor: 
 
 export function LinhaValor({ rotulo, valor, forte, negativo }: { rotulo: string; valor: string; forte?: boolean; negativo?: boolean }) {
   return (
-    <div className={`flex justify-between py-1.5 text-sm ${forte ? "mt-1 border-t border-white/[0.08] pt-3 text-base font-semibold" : ""}`}>
+    <div className={`flex justify-between py-1.5 text-sm ${forte ? "mt-1 border-t border-stone-200 pt-3 text-base font-semibold" : ""}`}>
       <span className="text-stone-500">{rotulo}</span>
       <span className={`font-mono tabular-nums ${negativo ? "text-stone-600" : forte ? "texto-gradiente" : "text-stone-900"}`}>{negativo ? `−${valor}` : valor}</span>
     </div>

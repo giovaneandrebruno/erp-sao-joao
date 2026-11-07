@@ -4,7 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Veio · São João Móveis",
+  title: "Emob Pro · São João Móveis",
   description: "Gestão de móveis planejados da São João Móveis",
 };
 

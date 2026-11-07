@@ -1,4 +1,4 @@
-# Veio · ERP da São João Móveis
+# Emob Pro · ERP da São João Móveis
 
 Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 
