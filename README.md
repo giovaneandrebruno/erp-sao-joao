@@ -46,10 +46,20 @@ Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 
 ### 2. Vercel
 
-1. Em [vercel.com/new](https://vercel.com/new), importe este repositório.
-2. Em **Environment Variables**, adicione `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-   Opcional: `SUPABASE_SECRET_KEY` (chave secreta) para criar usuários pela tela Equipe, e `NEXT_PUBLIC_SITE_URL` (endereço do sistema) para os links de proposta.
-3. Clique em **Deploy**.
+O projeto já vem configurado (`vercel.json`): Next.js, servidor em São Paulo (`gru1`), perto do banco.
+
+1. Em [vercel.com/new](https://vercel.com/new), importe o repositório `erp-sao-joao`. Não mude nada em Build Settings.
+2. Em **Environment Variables**, adicione:
+
+   | Nome | Onde pegar no Supabase | Obrigatória |
+   |---|---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Project Settings › API Keys (ou Data API) › Project URL | Sim |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Project Settings › API Keys › Publishable key (`sb_publishable_…`) | Sim |
+   | `SUPABASE_SECRET_KEY` | Project Settings › API Keys › Secret key (`sb_secret_…`) | Para criar usuários pela tela Equipe |
+   | `NEXT_PUBLIC_SITE_URL` | O endereço do site no Vercel, ex.: `https://emob-pro.vercel.app` | Recomendada (links da proposta) |
+
+3. Clique em **Deploy**. Cada alteração aprovada no GitHub publica sozinha.
+4. No Supabase, em **Authentication › URL Configuration**, coloque o endereço do Vercel em **Site URL**.
 
 ## Desenvolvimento local
 
