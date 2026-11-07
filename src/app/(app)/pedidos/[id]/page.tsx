@@ -27,7 +27,7 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
 
   return (
     <>
-      <Titulo acao={<Link href={`/pedidos/${id}/contrato`} className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm">Contrato nº {p.numero}/{p.criado_em.slice(0, 4)} (PDF)</Link>}>
+      <Titulo acao={<Link href={`/pedidos/${id}/contrato`} className="rounded-md border border-stone-300 bg-superficie px-4 py-2 text-sm">Contrato nº {p.numero}/{p.criado_em.slice(0, 4)} (PDF)</Link>}>
         Pedido #{p.numero}
       </Titulo>
       <p className="mb-6 text-sm text-stone-600">

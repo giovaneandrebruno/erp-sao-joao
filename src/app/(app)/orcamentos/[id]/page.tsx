@@ -27,7 +27,7 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
       <Titulo
         acao={
           <div className="flex flex-wrap gap-2">
-            <Link href={`/orcamentos/${id}/imprimir`} className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm">Imprimir / PDF</Link>
+            <Link href={`/orcamentos/${id}/imprimir`} className="rounded-md border border-stone-300 bg-superficie px-4 py-2 text-sm">Imprimir / PDF</Link>
             {o.status === "rascunho" && (
               <form action={mudarStatus.bind(null, id, "enviado")}><Botao variante="secundario">Marcar como enviado</Botao></form>
             )}

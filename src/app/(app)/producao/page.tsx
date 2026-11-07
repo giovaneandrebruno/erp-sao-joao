@@ -33,7 +33,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
                   const pedido = o.pedidos as unknown as { numero: number; clientes: { nome: string } | null } | null;
                   const atrasada = o.prazo && o.prazo < hoje;
                   return (
-                    <div key={o.id} className="rounded-md border border-stone-200 bg-white p-3 text-sm shadow-sm">
+                    <div key={o.id} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm transition hover:border-violeta/40 hover:bg-white/[0.05]">
                       <div className="font-medium">OP #{o.numero} · {o.descricao}</div>
                       {pedido && (
                         <Link href={`/pedidos/${o.pedido_id}`} className="block text-xs text-madeira-800 hover:underline">

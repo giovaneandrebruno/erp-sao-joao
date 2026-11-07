@@ -38,18 +38,19 @@ const GRUPOS = [
 export function Menu() {
   const caminho = usePathname();
   return (
-    <nav className="flex gap-4 overflow-x-auto md:flex-col md:gap-5">
+    <nav className="flex gap-4 overflow-x-auto md:flex-col md:gap-6">
       {GRUPOS.map((g) => (
         <div key={g.titulo} className="flex gap-1 md:flex-col">
-          <div className="hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-stone-500 md:block">{g.titulo}</div>
+          <div className="hidden px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400 md:block">{g.titulo}</div>
           {g.itens.map((i) => {
             const ativo = i.href === "/" ? caminho === "/" : caminho.startsWith(i.href);
             return (
               <Link
                 key={i.href}
                 href={i.href}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors ${ativo ? "bg-madeira-500 font-medium text-white" : "text-stone-300 hover:bg-white/10"}`}
+                className={`group relative flex items-center gap-3 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm transition-colors ${ativo ? "bg-white/[0.06] font-medium text-stone-900" : "text-stone-500 hover:bg-white/[0.03] hover:text-stone-800"}`}
               >
+                <span className={`h-1.5 w-1.5 rounded-full transition ${ativo ? "bg-ciano shadow-[0_0_10px_2px_rgb(0_229_255/0.7)]" : "bg-stone-300 group-hover:bg-stone-400"}`} />
                 {i.rotulo}
               </Link>
             );

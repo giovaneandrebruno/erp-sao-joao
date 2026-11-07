@@ -21,7 +21,7 @@ export default async function ContratoPage({ params }: PageProps<"/pedidos/[id]/
   const ambientes = Array.from(new Set((itens ?? []).map((i) => i.ambiente ?? "Geral")));
 
   return (
-    <div className="mx-auto max-w-3xl bg-white p-10 text-sm leading-relaxed print:p-0">
+    <div className="papel mx-auto max-w-3xl rounded-2xl bg-superficie p-10 text-sm leading-relaxed print:p-0">
       <div className="mb-6 flex justify-end print:hidden"><BotaoImprimir /></div>
       <div className="mb-6 border-b pb-4 text-center">
         <h1 className="text-xl font-semibold">Contrato de compra e venda de móveis planejados nº {numero}</h1>

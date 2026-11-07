@@ -19,7 +19,7 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
   const ambientes = Array.from(new Set((itens ?? []).map((i) => i.ambiente ?? "Geral")));
 
   return (
-    <div className="mx-auto max-w-3xl bg-white p-10 text-sm print:p-0">
+    <div className="papel mx-auto max-w-3xl rounded-2xl bg-superficie p-10 text-sm print:p-0">
       <div className="mb-6 flex justify-end print:hidden"><BotaoImprimir /></div>
       <div className="mb-8 flex items-start justify-between border-b pb-4">
         <div>

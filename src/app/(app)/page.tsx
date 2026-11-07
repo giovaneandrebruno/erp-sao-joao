@@ -32,37 +32,54 @@ export default async function PainelPage() {
   const cards = [
     { rotulo: "Vendido no mês", valor: brl(vendido), sub: `${vendasMes.data?.length ?? 0} pedidos · lucro ${brl(lucroMes)}${vendido ? ` (${pct((lucroMes / vendido) * 100)})` : ""}`, href: "/pedidos" },
     { rotulo: "Funil de vendas", valor: `${negociacoes.data?.length ?? 0}`, sub: `potencial ${brl(potencial)}`, href: "/crm" },
-    { rotulo: "Pedidos em andamento", valor: `${pedidosAtivos.data?.length ?? 0}`, sub: `${marcosAtrasados.count ?? 0} prazos atrasados`, href: "/prazos", alerta: (marcosAtrasados.count ?? 0) > 0 },
+    { rotulo: "Pedidos ativos", valor: `${pedidosAtivos.data?.length ?? 0}`, sub: `${marcosAtrasados.count ?? 0} prazos atrasados`, href: "/prazos", alerta: (marcosAtrasados.count ?? 0) > 0 },
     { rotulo: "A receber em 7 dias", valor: brl(somar(semana.data, "receber")), sub: `vencido: ${brl(somar(vencidos.data, "receber"))}`, href: "/financeiro?tipo=receber" },
     { rotulo: "A pagar em 7 dias", valor: brl(somar(semana.data, "pagar")), sub: `vencido: ${brl(somar(vencidos.data, "pagar"))}`, href: "/financeiro?tipo=pagar" },
-    { rotulo: "Assistência técnica", valor: `${chamados.count ?? 0}`, sub: `chamados abertos · ${repor} itens para repor`, href: "/assistencia" },
+    { rotulo: "Assistência técnica", valor: `${chamados.count ?? 0}`, sub: "chamados abertos", href: "/assistencia" },
+    { rotulo: "Estoque", valor: `${repor}`, sub: "itens abaixo do mínimo", href: "/estoque", alerta: repor > 0 },
   ];
+
+  const [destaque, ...resto] = cards;
+  const lista = "divide-y divide-white/[0.05] text-sm";
 
   return (
     <>
-      <Titulo>Painel</Titulo>
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map((c) => (
-          <Link key={c.rotulo} href={c.href}>
-            <Cartao className="h-full transition-colors hover:border-madeira-400">
-              <div className="text-sm text-stone-500">{c.rotulo}</div>
-              <div className="text-2xl font-semibold text-grafite">{c.valor}</div>
-              <div className={`text-xs ${c.alerta ? "font-semibold text-red-600" : "text-stone-500"}`}>{c.sub}</div>
+      <Titulo sub={agoraTexto()}>Painel</Titulo>
+      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Link href={destaque.href} className="borda-gradiente group relative overflow-hidden rounded-3xl p-8 sm:col-span-2 lg:row-span-2">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violeta/30 blur-3xl transition group-hover:bg-ciano/30" />
+          <div className="relative flex h-full flex-col justify-between gap-10">
+            <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">{destaque.rotulo}</div>
+            <div>
+              <div className="texto-gradiente font-mono text-4xl font-semibold tracking-tighter xl:text-5xl 2xl:text-6xl">{destaque.valor}</div>
+              <div className="mt-3 text-sm text-stone-500">{destaque.sub}</div>
+            </div>
+          </div>
+        </Link>
+        {resto.map((c) => (
+          <Link key={c.rotulo} href={c.href} className="group">
+            <Cartao className="h-full transition group-hover:border-violeta/40">
+              <div className="flex items-center justify-between gap-2 text-[11px] font-medium uppercase tracking-wider text-stone-500">
+                {c.rotulo}
+                <span className={`h-1.5 w-1.5 rounded-full ${c.alerta ? "bg-rosa shadow-[0_0_10px_2px_rgb(255_77_125/0.7)]" : "bg-stone-300"}`} />
+              </div>
+              <div className="mt-4 font-mono text-2xl font-semibold tracking-tight text-stone-900">{c.valor}</div>
+              <div className={`mt-1 text-xs ${c.alerta ? "text-rosa" : "text-stone-500"}`}>{c.sub}</div>
             </Cartao>
           </Link>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-3 text-lg font-semibold">Retornos para hoje</h2>
+        <section>
+          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Retornos para hoje</h2>
           <Cartao>
             {acoesHoje.length ? (
-              <ul className="divide-y divide-stone-100 text-sm">
+              <ul className={lista}>
                 {acoesHoje.slice(0, 8).map((n) => (
-                  <li key={n.id} className="flex justify-between gap-4 py-2">
-                    <Link href={`/crm/${n.id}`} className="text-madeira-700 hover:underline">{(n.clientes as unknown as { nome: string })?.nome} · {n.proxima_acao}</Link>
-                    <span className={n.proxima_acao_data! < hoje ? "font-semibold text-red-600" : "text-stone-500"}>{data(n.proxima_acao_data)}</span>
+                  <li key={n.id} className="flex justify-between gap-4 py-2.5">
+                    <Link href={`/crm/${n.id}`} className="text-stone-800 transition hover:text-ciano">{(n.clientes as unknown as { nome: string })?.nome} · <span className="text-stone-500">{n.proxima_acao}</span></Link>
+                    <span className={`font-mono text-xs ${n.proxima_acao_data! < hoje ? "text-rosa" : "text-stone-500"}`}>{data(n.proxima_acao_data)}</span>
                   </li>
                 ))}
               </ul>
@@ -70,17 +87,17 @@ export default async function PainelPage() {
               <p className="text-sm text-stone-400">Nenhum retorno pendente.</p>
             )}
           </Cartao>
-        </div>
-        <div>
-          <h2 className="mb-3 text-lg font-semibold">Próximas entregas</h2>
+        </section>
+        <section>
+          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Próximas entregas</h2>
           <Cartao>
             {pedidosAtivos.data?.length ? (
-              <ul className="divide-y divide-stone-100 text-sm">
+              <ul className={lista}>
                 {pedidosAtivos.data.slice(0, 8).map((p) => (
-                  <li key={p.id} className="flex justify-between gap-4 py-2">
-                    <Link href={`/pedidos/${p.id}`} className="text-madeira-700 hover:underline">#{p.numero} · {p.cliente_nome}</Link>
-                    <span className={p.data_entrega_prevista && p.data_entrega_prevista < hoje ? "font-semibold text-red-600" : "text-stone-500"}>
-                      {ROTULOS.statusPedido[p.status as keyof typeof ROTULOS.statusPedido]} · {data(p.data_entrega_prevista)}
+                  <li key={p.id} className="flex justify-between gap-4 py-2.5">
+                    <Link href={`/pedidos/${p.id}`} className="text-stone-800 transition hover:text-ciano"><span className="font-mono text-stone-500">#{p.numero}</span> {p.cliente_nome}</Link>
+                    <span className={`text-xs ${p.data_entrega_prevista && p.data_entrega_prevista < hoje ? "text-rosa" : "text-stone-500"}`}>
+                      {ROTULOS.statusPedido[p.status as keyof typeof ROTULOS.statusPedido]} · <span className="font-mono">{data(p.data_entrega_prevista)}</span>
                     </span>
                   </li>
                 ))}
@@ -89,8 +106,12 @@ export default async function PainelPage() {
               <p className="text-sm text-stone-400">Nenhum pedido em andamento.</p>
             )}
           </Cartao>
-        </div>
+        </section>
       </div>
     </>
   );
+}
+
+function agoraTexto() {
+  return new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
 }

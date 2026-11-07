@@ -42,7 +42,7 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
                   const vend = n.vendedor as unknown as { nome: string } | null;
                   const atrasada = n.proxima_acao_data && n.proxima_acao_data < hoje;
                   return (
-                    <div key={n.id} className="rounded-md border border-stone-200 bg-white p-3 text-sm shadow-sm">
+                    <div key={n.id} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm transition hover:border-violeta/40 hover:bg-white/[0.05]">
                       <Link href={`/crm/${n.id}`} className="font-medium text-stone-900 hover:text-madeira-700">{cli?.nome}</Link>
                       <div className="text-xs text-stone-500">{n.titulo}</div>
                       {n.valor_estimado && <div className="mt-1 text-sm font-medium">{brl(n.valor_estimado)}</div>}

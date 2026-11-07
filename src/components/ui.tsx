@@ -1,31 +1,36 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export function Titulo({ children, acao }: { children: ReactNode; acao?: ReactNode }) {
+export function Titulo({ children, acao, sub }: { children: ReactNode; acao?: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4">
-      <h1 className="text-2xl font-semibold text-stone-800">{children}</h1>
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-stone-900">{children}</h1>
+        {sub && <p className="mt-1 text-sm text-stone-500">{sub}</p>}
+      </div>
       {acao}
     </div>
   );
 }
 
-export function BotaoLink({ href, children }: { href: string; children: ReactNode }) {
+const PRIMARIO =
+  "rounded-full bg-gradient-to-r from-violeta to-ciano px-5 py-2 text-sm font-semibold text-black shadow-[0_0_24px_-6px_rgb(124_92_255/0.7)] transition hover:brightness-110 hover:shadow-[0_0_32px_-4px_rgb(0_229_255/0.6)] disabled:opacity-50";
+const SECUNDARIO =
+  "rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-stone-800 transition hover:border-white/20 hover:bg-white/[0.08]";
+
+export function BotaoLink({ href, children, variante = "primario" }: { href: string; children: ReactNode; variante?: "primario" | "secundario" }) {
   return (
-    <Link href={href} className="rounded-md bg-madeira-700 px-4 py-2 text-sm font-medium text-white hover:bg-madeira-800">
+    <Link href={href} className={variante === "primario" ? PRIMARIO : SECUNDARIO}>
       {children}
     </Link>
   );
 }
 
 export function Botao({ children, variante = "primario", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variante?: "primario" | "secundario" | "perigo" }) {
-  const cores = {
-    primario: "bg-madeira-700 text-white hover:bg-madeira-800",
-    secundario: "border border-stone-300 bg-white text-stone-700 hover:bg-stone-50",
-    perigo: "bg-red-600 text-white hover:bg-red-700",
-  }[variante];
+  const cls =
+    variante === "primario" ? PRIMARIO : variante === "secundario" ? SECUNDARIO : "rounded-full bg-rosa px-5 py-2 text-sm font-semibold text-black hover:brightness-110";
   return (
-    <button {...props} className={`rounded-md px-4 py-2 text-sm font-medium ${cores} ${props.className ?? ""}`}>
+    <button {...props} className={`${cls} ${props.className ?? ""}`}>
       {children}
     </button>
   );
@@ -33,65 +38,76 @@ export function Botao({ children, variante = "primario", ...props }: React.Butto
 
 export function Campo({ rotulo, children, className = "" }: { rotulo: string; children: ReactNode; className?: string }) {
   return (
-    <label className={`flex flex-col gap-1 text-sm ${className}`}>
-      <span className="font-medium text-stone-600">{rotulo}</span>
+    <label className={`flex flex-col gap-1.5 text-sm ${className}`}>
+      <span className="text-[11px] font-medium uppercase tracking-wider text-stone-500">{rotulo}</span>
       {children}
     </label>
   );
 }
 
-export const inputCls = "rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-madeira-600 focus:outline-none";
+export const inputCls =
+  "rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 transition focus:border-violeta/60 focus:bg-white/[0.05] focus:outline-none focus:ring-4 focus:ring-violeta/15 disabled:opacity-60 [&>option]:bg-stone-100";
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-lg border border-stone-200 bg-white p-5 shadow-sm ${className}`}>{children}</div>;
+  return <div className={`vidro rounded-2xl p-6 ${className}`}>{children}</div>;
 }
 
 export function Tabela({ cabecalho, children, vazio }: { cabecalho: string[]; children: ReactNode; vazio?: boolean }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white shadow-sm">
+    <div className="vidro overflow-x-auto rounded-2xl">
       <table className="w-full text-left text-sm">
-        <thead className="bg-stone-50 text-stone-500">
-          <tr>{cabecalho.map((c) => <th key={c} className="px-4 py-3 font-medium">{c}</th>)}</tr>
+        <thead>
+          <tr className="border-b border-white/[0.06]">
+            {cabecalho.map((c, i) => (
+              <th key={`${c}-${i}`} className="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-stone-500">{c}</th>
+            ))}
+          </tr>
         </thead>
-        <tbody className="divide-y divide-stone-100">{children}</tbody>
+        <tbody className="divide-y divide-white/[0.04] [&_td]:px-5 [&_tr]:transition-colors [&_tr:hover]:bg-white/[0.02]">{children}</tbody>
       </table>
-      {vazio && <p className="p-6 text-center text-sm text-stone-400">Nenhum registro ainda.</p>}
+      {vazio && <p className="p-8 text-center text-sm text-stone-400">Nada por aqui ainda.</p>}
     </div>
   );
 }
 
-export function Selo({ children, cor = "stone" }: { children: ReactNode; cor?: "stone" | "amber" | "green" | "red" | "blue" }) {
-  const cores = {
-    stone: "bg-stone-100 text-stone-700",
-    amber: "bg-madeira-100 text-madeira-800",
-    green: "bg-green-100 text-green-800",
-    red: "bg-red-100 text-red-700",
-    blue: "bg-blue-100 text-blue-800",
-  }[cor];
-  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${cores}`}>{children}</span>;
+const CORES_SELO = {
+  stone: "bg-white/[0.06] text-stone-600 ring-white/10",
+  amber: "bg-violeta/10 text-madeira-800 ring-violeta/30",
+  green: "bg-neon/10 text-neon ring-neon/25",
+  red: "bg-rosa/10 text-rosa ring-rosa/30",
+  blue: "bg-ciano/10 text-ciano ring-ciano/25",
+};
+
+export function Selo({ children, cor = "stone" }: { children: ReactNode; cor?: keyof typeof CORES_SELO }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${CORES_SELO[cor]}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {children}
+    </span>
+  );
 }
 
 export function Erro({ mensagem }: { mensagem?: string | null }) {
   if (!mensagem) return null;
-  return <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{mensagem}</p>;
+  return <p className="rounded-xl bg-rosa/10 p-3 text-sm text-rosa ring-1 ring-rosa/30">{mensagem}</p>;
 }
 
 export function Indicador({ rotulo, valor, sub, cor }: { rotulo: string; valor: ReactNode; sub?: ReactNode; cor?: "verde" | "vermelho" }) {
-  const c = cor === "verde" ? "text-green-700" : cor === "vermelho" ? "text-red-700" : "text-stone-900";
+  const c = cor === "verde" ? "text-neon" : cor === "vermelho" ? "text-rosa" : "text-stone-900";
   return (
     <Cartao className="h-full">
-      <div className="text-sm text-stone-500">{rotulo}</div>
-      <div className={`text-2xl font-semibold ${c}`}>{valor}</div>
-      {sub && <div className="text-xs text-stone-500">{sub}</div>}
+      <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">{rotulo}</div>
+      <div className={`mt-2 font-mono text-2xl font-semibold tracking-tight ${c}`}>{valor}</div>
+      {sub && <div className="mt-1 text-xs text-stone-500">{sub}</div>}
     </Cartao>
   );
 }
 
 export function LinhaValor({ rotulo, valor, forte, negativo }: { rotulo: string; valor: string; forte?: boolean; negativo?: boolean }) {
   return (
-    <div className={`flex justify-between py-1 text-sm ${forte ? "border-t border-stone-200 pt-2 font-semibold" : ""}`}>
-      <span className="text-stone-600">{rotulo}</span>
-      <span className={negativo ? "text-red-700" : ""}>{negativo ? `−${valor}` : valor}</span>
+    <div className={`flex justify-between py-1.5 text-sm ${forte ? "mt-1 border-t border-white/[0.08] pt-3 text-base font-semibold" : ""}`}>
+      <span className="text-stone-500">{rotulo}</span>
+      <span className={`font-mono tabular-nums ${negativo ? "text-stone-600" : forte ? "texto-gradiente" : "text-stone-900"}`}>{negativo ? `−${valor}` : valor}</span>
     </div>
   );
 }

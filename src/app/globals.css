@@ -1,26 +1,119 @@
 @import "tailwindcss";
 
-/* Identidade "Veio": tons de madeira (nogueira) sobre grafite e areia */
+/*
+ * Identidade "Veio" — tema escuro, minimalista, com acento neon (violeta elétrico → ciano).
+ * As escalas "stone" e "madeira" são redefinidas para o modo escuro; a classe .papel
+ * devolve as cores claras para documentos impressos (orçamento e contrato).
+ */
 @theme {
-  --color-madeira-50: #faf6f1;
-  --color-madeira-100: #f2e8dc;
-  --color-madeira-200: #e4cfb6;
-  --color-madeira-300: #d2b08a;
-  --color-madeira-400: #bf8c5e;
-  --color-madeira-500: #a8703f;
-  --color-madeira-600: #8f5a31;
-  --color-madeira-700: #74472a;
-  --color-madeira-800: #5e3a25;
-  --color-madeira-900: #4c3020;
-  --color-grafite: #1f1c1a;
-  --color-areia: #f6f3ee;
-  --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-fundo: #06060b;
+  --color-superficie: #0d0d15;
+  --color-grafite: #f5f5fa;
+  --color-violeta: #7c5cff;
+  --color-ciano: #00e5ff;
+  --color-neon: #3dfc9a;
+  --color-rosa: #ff4d7d;
+
+  --color-stone-50: #101019;
+  --color-stone-100: #15151f;
+  --color-stone-200: #22222e;
+  --color-stone-300: #2e2e3d;
+  --color-stone-400: #5b5b73;
+  --color-stone-500: #8a8aa3;
+  --color-stone-600: #a7a7bd;
+  --color-stone-700: #c7c7d8;
+  --color-stone-800: #e4e4ee;
+  --color-stone-900: #f5f5fa;
+
+  --color-madeira-50: #15112a;
+  --color-madeira-100: #1d1640;
+  --color-madeira-200: #2f2366;
+  --color-madeira-300: #4b39a3;
+  --color-madeira-400: #7c5cff;
+  --color-madeira-500: #7c5cff;
+  --color-madeira-600: #8f74ff;
+  --color-madeira-700: #a996ff;
+  --color-madeira-800: #c6b9ff;
+  --color-madeira-900: #e2dcff;
+
+  --color-green-50: #0a1f16;
+  --color-green-100: #0d2a1e;
+  --color-green-700: #3dfc9a;
+  --color-green-800: #7dffbe;
+  --color-red-50: #220a12;
+  --color-red-100: #2d0e18;
+  --color-red-600: #ff4d7d;
+  --color-red-700: #ff6f95;
+  --color-blue-100: #0a2230;
+  --color-blue-800: #5ce8ff;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
   font-family: var(--font-sans);
+  background-color: var(--color-fundo);
+  background-image:
+    radial-gradient(60rem 30rem at 0% -10%, rgb(124 92 255 / 0.16), transparent 60%),
+    radial-gradient(50rem 28rem at 100% -10%, rgb(0 229 255 / 0.10), transparent 60%);
+  background-attachment: fixed;
+  font-feature-settings: "ss01", "cv11";
+}
+
+@layer components {
+.texto-gradiente {
+  background: linear-gradient(90deg, var(--color-violeta), var(--color-ciano));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.vidro {
+  background: rgb(13 13 21 / 0.72);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.borda-gradiente {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-superficie), var(--color-superficie)) padding-box,
+    linear-gradient(120deg, rgb(124 92 255 / 0.7), rgb(0 229 255 / 0.5)) border-box;
+}
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+/* Documentos para o cliente: papel branco */
+.papel {
+  color-scheme: light;
+  color: #1c1917;
+  --color-superficie: #ffffff;
+  --color-grafite: #1c1917;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-madeira-50: #f3f0ff;
+  --color-madeira-700: #5b3fd6;
+  --color-madeira-800: #4a32b0;
 }
 
 @media print {
-  body { background: white; }
+  body {
+    background: white;
+  }
 }
