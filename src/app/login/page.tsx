@@ -1,11 +1,12 @@
+import { Marca } from "@/components/logo";
 import { FormLogin } from "./form";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
+    <main className="flex min-h-screen items-center justify-center bg-grafite p-6">
       <div className="w-full max-w-sm rounded-lg border border-stone-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold">ERP São João</h1>
-        <p className="mb-6 text-sm text-stone-500">Marcenaria e São João Móveis</p>
+        <div className="mb-6"><Marca /></div>
+        <p className="mb-4 text-sm text-stone-500">Gestão da marcenaria e da loja. Entre com seu usuário.</p>
         <FormLogin />
       </div>
     </main>

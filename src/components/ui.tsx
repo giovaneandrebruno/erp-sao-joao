@@ -12,7 +12,7 @@ export function Titulo({ children, acao }: { children: ReactNode; acao?: ReactNo
 
 export function BotaoLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800">
+    <Link href={href} className="rounded-md bg-madeira-700 px-4 py-2 text-sm font-medium text-white hover:bg-madeira-800">
       {children}
     </Link>
   );
@@ -20,7 +20,7 @@ export function BotaoLink({ href, children }: { href: string; children: ReactNod
 
 export function Botao({ children, variante = "primario", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variante?: "primario" | "secundario" | "perigo" }) {
   const cores = {
-    primario: "bg-amber-700 text-white hover:bg-amber-800",
+    primario: "bg-madeira-700 text-white hover:bg-madeira-800",
     secundario: "border border-stone-300 bg-white text-stone-700 hover:bg-stone-50",
     perigo: "bg-red-600 text-white hover:bg-red-700",
   }[variante];
@@ -40,7 +40,7 @@ export function Campo({ rotulo, children, className = "" }: { rotulo: string; ch
   );
 }
 
-export const inputCls = "rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none";
+export const inputCls = "rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-madeira-600 focus:outline-none";
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-lg border border-stone-200 bg-white p-5 shadow-sm ${className}`}>{children}</div>;
@@ -63,7 +63,7 @@ export function Tabela({ cabecalho, children, vazio }: { cabecalho: string[]; ch
 export function Selo({ children, cor = "stone" }: { children: ReactNode; cor?: "stone" | "amber" | "green" | "red" | "blue" }) {
   const cores = {
     stone: "bg-stone-100 text-stone-700",
-    amber: "bg-amber-100 text-amber-800",
+    amber: "bg-madeira-100 text-madeira-800",
     green: "bg-green-100 text-green-800",
     red: "bg-red-100 text-red-700",
     blue: "bg-blue-100 text-blue-800",
@@ -74,4 +74,24 @@ export function Selo({ children, cor = "stone" }: { children: ReactNode; cor?: "
 export function Erro({ mensagem }: { mensagem?: string | null }) {
   if (!mensagem) return null;
   return <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{mensagem}</p>;
+}
+
+export function Indicador({ rotulo, valor, sub, cor }: { rotulo: string; valor: ReactNode; sub?: ReactNode; cor?: "verde" | "vermelho" }) {
+  const c = cor === "verde" ? "text-green-700" : cor === "vermelho" ? "text-red-700" : "text-stone-900";
+  return (
+    <Cartao className="h-full">
+      <div className="text-sm text-stone-500">{rotulo}</div>
+      <div className={`text-2xl font-semibold ${c}`}>{valor}</div>
+      {sub && <div className="text-xs text-stone-500">{sub}</div>}
+    </Cartao>
+  );
+}
+
+export function LinhaValor({ rotulo, valor, forte, negativo }: { rotulo: string; valor: string; forte?: boolean; negativo?: boolean }) {
+  return (
+    <div className={`flex justify-between py-1 text-sm ${forte ? "border-t border-stone-200 pt-2 font-semibold" : ""}`}>
+      <span className="text-stone-600">{rotulo}</span>
+      <span className={negativo ? "text-red-700" : ""}>{negativo ? `−${valor}` : valor}</span>
+    </div>
+  );
 }

@@ -18,7 +18,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
 
   return (
     <>
-      <Titulo acao={<Link href={concluidas ? "/producao" : "/producao?concluidas=1"} className="text-sm text-amber-800 hover:underline">{concluidas ? "Ocultar concluídas" : "Mostrar concluídas"}</Link>}>
+      <Titulo acao={<Link href={concluidas ? "/producao" : "/producao?concluidas=1"} className="text-sm text-madeira-800 hover:underline">{concluidas ? "Ocultar concluídas" : "Mostrar concluídas"}</Link>}>
         Produção
       </Titulo>
       <p className="mb-4 text-sm text-stone-500">Crie ordens de produção dentro de cada pedido. Use as setas para mudar a etapa.</p>
@@ -26,7 +26,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
         {colunas.map((etapa) => {
           const daEtapa = ordens?.filter((o) => o.etapa === etapa) ?? [];
           return (
-            <div key={etapa} className="w-60 shrink-0 rounded-lg bg-stone-200/60 p-2">
+            <div key={etapa} className="min-w-40 flex-1 rounded-lg bg-stone-200/60 p-2">
               <div className="mb-2 px-1 text-sm font-semibold text-stone-600">{ROTULOS.etapa[etapa]} <span className="text-stone-400">({daEtapa.length})</span></div>
               <div className="flex flex-col gap-2">
                 {daEtapa.map((o) => {
@@ -36,7 +36,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
                     <div key={o.id} className="rounded-md border border-stone-200 bg-white p-3 text-sm shadow-sm">
                       <div className="font-medium">OP #{o.numero} · {o.descricao}</div>
                       {pedido && (
-                        <Link href={`/pedidos/${o.pedido_id}`} className="block text-xs text-amber-800 hover:underline">
+                        <Link href={`/pedidos/${o.pedido_id}`} className="block text-xs text-madeira-800 hover:underline">
                           Pedido #{pedido.numero} · {pedido.clientes?.nome}
                         </Link>
                       )}

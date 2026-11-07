@@ -11,8 +11,12 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
     supabase.from("orcamento_itens").select("*").eq("orcamento_id", id).order("ordem").order("criado_em"),
   ]);
   if (!o) notFound();
-  const { data: cliente } = await supabase.from("clientes").select("*").eq("id", o.cliente_id).single();
-  const empresa = o.unidade === "loja" ? "São João Móveis" : "Marcenaria São João";
+  const [{ data: cliente }, { data: cfg }] = await Promise.all([
+    supabase.from("clientes").select("*").eq("id", o.cliente_id).single(),
+    supabase.from("configuracoes").select("nome_fantasia, cnpj, telefone, email, endereco, cidade, uf").single(),
+  ]);
+  const empresa = cfg?.nome_fantasia ?? "São João Móveis";
+  const ambientes = Array.from(new Set((itens ?? []).map((i) => i.ambiente ?? "Geral")));
 
   return (
     <div className="mx-auto max-w-3xl bg-white p-10 text-sm print:p-0">
@@ -20,7 +24,8 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
       <div className="mb-8 flex items-start justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold">{empresa}</h1>
-          <p className="text-stone-500">Orçamento nº {o.numero}</p>
+          <p className="text-xs text-stone-500">{[cfg?.cnpj && `CNPJ ${cfg.cnpj}`, cfg?.telefone, cfg?.email].filter(Boolean).join(" · ")}</p>
+          <p className="mt-2 font-medium text-madeira-700">Orçamento nº {o.numero}</p>
         </div>
         <div className="text-right text-stone-600">
           <div>Emitido em {data(o.criado_em)}</div>
@@ -37,15 +42,24 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
           <tr><th className="py-2">Ambiente</th><th>Descrição</th><th className="text-right">Qtd</th><th className="text-right">Unit.</th><th className="text-right">Total</th></tr>
         </thead>
         <tbody>
-          {itens?.map((i) => (
-            <tr key={i.id} className="border-b border-stone-100">
-              <td className="py-2">{i.ambiente ?? ""}</td>
-              <td>{i.descricao}</td>
-              <td className="text-right">{Number(i.quantidade)}</td>
-              <td className="text-right">{brl(i.preco_unitario)}</td>
-              <td className="text-right">{brl(Number(i.quantidade) * Number(i.preco_unitario))}</td>
-            </tr>
-          ))}
+          {ambientes.map((amb) => {
+            const doAmb = (itens ?? []).filter((i) => (i.ambiente ?? "Geral") === amb);
+            const soma = doAmb.reduce((s, i) => s + Number(i.quantidade) * Number(i.preco_unitario), 0);
+            return [
+              ...doAmb.map((i) => (
+                <tr key={i.id} className="border-b border-stone-100">
+                  <td className="py-2">{amb}</td>
+                  <td>{i.descricao}</td>
+                  <td className="text-right">{Number(i.quantidade)}</td>
+                  <td className="text-right">{brl(i.preco_unitario)}</td>
+                  <td className="text-right">{brl(Number(i.quantidade) * Number(i.preco_unitario))}</td>
+                </tr>
+              )),
+              ambientes.length > 1 ? (
+                <tr key={`t-${amb}`} className="bg-madeira-50 text-xs"><td colSpan={4} className="py-1 text-right">Subtotal {amb}</td><td className="text-right">{brl(soma)}</td></tr>
+              ) : null,
+            ];
+          })}
         </tbody>
       </table>
       <div className="mb-8 text-right">

@@ -20,15 +20,15 @@ export default async function OrcamentosPage({ searchParams }: PageProps<"/orcam
     <>
       <Titulo acao={<BotaoLink href="/orcamentos/novo">Novo orçamento</BotaoLink>}>Orçamentos</Titulo>
       <div className="mb-4 flex flex-wrap gap-2 text-sm">
-        <Link href="/orcamentos" className={!status ? "font-semibold text-amber-800" : "text-stone-500"}>Todos</Link>
+        <Link href="/orcamentos" className={!status ? "font-semibold text-madeira-800" : "text-stone-500"}>Todos</Link>
         {Object.entries(ROTULOS.statusOrcamento).map(([k, r]) => (
-          <Link key={k} href={`/orcamentos?status=${k}`} className={status === k ? "font-semibold text-amber-800" : "text-stone-500"}>{r}</Link>
+          <Link key={k} href={`/orcamentos?status=${k}`} className={status === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
         ))}
       </div>
       <Tabela cabecalho={["Nº", "Cliente", "Unidade", "Data", "Validade", "Status", "Total"]} vazio={!orcamentos?.length}>
         {orcamentos?.map((o) => (
           <tr key={o.id} className="hover:bg-stone-50">
-            <td className="px-4 py-3"><Link href={`/orcamentos/${o.id}`} className="font-medium text-amber-800 hover:underline">#{o.numero}</Link></td>
+            <td className="px-4 py-3"><Link href={`/orcamentos/${o.id}`} className="font-medium text-madeira-800 hover:underline">#{o.numero}</Link></td>
             <td className="px-4 py-3">{o.cliente_nome}</td>
             <td className="px-4 py-3">{ROTULOS.unidade[o.unidade as keyof typeof ROTULOS.unidade]}</td>
             <td className="px-4 py-3">{data(o.criado_em)}</td>

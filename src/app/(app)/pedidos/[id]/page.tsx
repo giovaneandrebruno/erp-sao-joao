@@ -2,28 +2,37 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl, data } from "@/lib/format";
-import { criarOrdem, gerarParcelas, mudarStatusPedido } from "../actions";
+import { ROTULOS, ROTULOS2, brl, data, hojeISO } from "@/lib/format";
+import { atualizarMarco, criarOrdem, gerarParcelas, lancarComissoes, mudarStatusPedido } from "../actions";
+import { Previsao } from "../../orcamentos/previsao";
 
 export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: p }, { data: itens }, { data: ordens }, { data: parcelas }] = await Promise.all([
+  const [{ data: p }, { data: itens }, { data: ordens }, { data: parcelas }, { data: marcos }, { data: montadores }, { data: cfg }] = await Promise.all([
     supabase.from("pedidos_resumo").select("*").eq("id", id).maybeSingle(),
     supabase.from("pedido_itens").select("*").eq("pedido_id", id).order("ordem"),
     supabase.from("ordens_producao").select("*").eq("pedido_id", id).order("numero"),
     supabase.from("lancamentos").select("*").eq("pedido_id", id).eq("tipo", "receber").order("vencimento"),
+    supabase.from("pedido_marcos").select("*").eq("pedido_id", id),
+    supabase.from("parceiros").select("id, nome").eq("tipo", "montador").eq("ativo", true).order("nome"),
+    supabase.from("configuracoes").select("margem_minima").single(),
   ]);
+  const ordemMarcos = Object.keys(ROTULOS2.marco);
+  const marcosOrdenados = (marcos ?? []).sort((a, b) => ordemMarcos.indexOf(a.tipo) - ordemMarcos.indexOf(b.tipo));
+  const hoje = hojeISO();
   if (!p) notFound();
   const recebido = parcelas?.filter((l) => l.pago_em).reduce((s, l) => s + Number(l.valor), 0) ?? 0;
   const lancado = parcelas?.reduce((s, l) => s + Number(l.valor), 0) ?? 0;
 
   return (
     <>
-      <Titulo>Pedido #{p.numero}</Titulo>
+      <Titulo acao={<Link href={`/pedidos/${id}/contrato`} className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm">Contrato nº {p.numero}/{p.criado_em.slice(0, 4)} (PDF)</Link>}>
+        Pedido #{p.numero}
+      </Titulo>
       <p className="mb-6 text-sm text-stone-600">
-        Cliente: <Link href={`/clientes/${p.cliente_id}`} className="font-medium text-amber-800 hover:underline">{p.cliente_nome}</Link>
-        {p.orcamento_id && <> · <Link href={`/orcamentos/${p.orcamento_id}`} className="text-amber-800 hover:underline">ver orçamento</Link></>}
+        Cliente: <Link href={`/clientes/${p.cliente_id}`} className="font-medium text-madeira-800 hover:underline">{p.cliente_nome}</Link>
+        {p.orcamento_id && <> · <Link href={`/orcamentos/${p.orcamento_id}`} className="text-madeira-800 hover:underline">ver orçamento</Link></>}
         {" · "}{ROTULOS.unidade[p.unidade as keyof typeof ROTULOS.unidade]}
       </p>
 
@@ -40,6 +49,52 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           <Botao type="submit">Salvar</Botao>
         </form>
       </Cartao>
+
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
+        <div>
+          <Previsao r={p} margemMinima={Number(cfg?.margem_minima ?? 0)} titulo="Resultado do pedido" />
+          <Cartao className="mt-4">
+            <h3 className="mb-2 font-semibold">Comissões</h3>
+            <p className="text-sm text-stone-600">
+              Vendedor: {brl(p.valor_comissao_vendedor)} · RT: {brl(p.valor_comissao_arquiteto)}
+            </p>
+            {p.comissoes_lancadas ? (
+              <p className="mt-2 text-sm text-green-700">Já lançadas no financeiro (a pagar).</p>
+            ) : (Number(p.valor_comissao_vendedor) + Number(p.valor_comissao_arquiteto) > 0) ? (
+              <form action={lancarComissoes.bind(null, id)} className="mt-3"><Botao variante="secundario">Lançar comissões no financeiro</Botao></form>
+            ) : (
+              <p className="mt-2 text-sm text-stone-400">Sem comissões neste pedido.</p>
+            )}
+          </Cartao>
+        </div>
+        <Cartao>
+          <h3 className="mb-3 font-semibold">Marcos de prazo</h3>
+          <div className="flex flex-col divide-y divide-stone-100">
+            {marcosOrdenados.map((m) => {
+              const atrasado = !m.realizado && m.previsto && m.previsto < hoje;
+              return (
+                <form key={m.id} action={atualizarMarco.bind(null, id, m.id)} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+                  <span className={`w-40 font-medium ${m.realizado ? "text-green-700" : atrasado ? "text-red-600" : ""}`}>
+                    {m.realizado ? "✓ " : atrasado ? "! " : ""}{ROTULOS2.marco[m.tipo as keyof typeof ROTULOS2.marco]}
+                  </span>
+                  <input type="date" name="previsto" defaultValue={m.previsto ?? ""} className={`${inputCls} py-1`} title="Previsto" />
+                  <input type="date" name="realizado" defaultValue={m.realizado ?? ""} className={`${inputCls} py-1`} title="Realizado" />
+                  {(m.tipo === "montagem" || m.tipo === "entrega" || m.tipo === "medicao") && (
+                    <select name="responsavel_id" defaultValue={m.responsavel_id ?? ""} className={`${inputCls} py-1`}>
+                      <option value="">responsável</option>
+                      {montadores?.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                    </select>
+                  )}
+                  <button className="text-xs text-madeira-700 hover:underline">salvar</button>
+                  {!m.realizado && <button name="concluir" value="1" className="text-xs text-green-700 hover:underline">feito hoje</button>}
+                </form>
+              );
+            })}
+            {!marcosOrdenados.length && <p className="text-sm text-stone-400">Sem marcos para este pedido.</p>}
+          </div>
+          <p className="mt-2 text-xs text-stone-500">Primeira data: previsto. Segunda: realizado.</p>
+        </Cartao>
+      </div>
 
       <h2 className="mb-3 text-lg font-semibold">Itens</h2>
       <Tabela cabecalho={["Ambiente", "Descrição", "Qtd", "Valor unit.", "Total"]} vazio={!itens?.length}>
@@ -107,13 +162,13 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
               <input name="entrada" inputMode="decimal" className={inputCls} />
             </Campo>
             <Campo rotulo="Nº de parcelas" className="md:col-span-2">
-              <input name="parcelas" type="number" min={0} defaultValue={1} className={inputCls} />
+              <input name="parcelas" type="number" min={0} defaultValue={p.parcelas ?? 1} className={inputCls} />
             </Campo>
             <Campo rotulo="1º vencimento" className="md:col-span-3">
               <input name="primeiro_vencimento" type="date" className={inputCls} />
             </Campo>
             <Campo rotulo="Forma de pagamento" className="md:col-span-3">
-              <input name="forma_pagamento" placeholder="Pix, boleto, cartão..." className={inputCls} />
+              <input name="forma_pagamento" defaultValue={ROTULOS2.formaPagamento[p.forma_pagamento as keyof typeof ROTULOS2.formaPagamento] ?? ""} className={inputCls} />
             </Campo>
             <div className="flex items-end md:col-span-2"><Botao type="submit">Gerar</Botao></div>
           </form>

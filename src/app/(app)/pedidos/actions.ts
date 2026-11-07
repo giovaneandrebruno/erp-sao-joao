@@ -67,3 +67,54 @@ export async function gerarParcelas(pedidoId: string, form: FormData) {
   revalidatePath(`/pedidos/${pedidoId}`);
   revalidatePath("/financeiro");
 }
+
+export async function atualizarMarco(pedidoId: string, marcoId: string, form: FormData) {
+  const supabase = await createClient();
+  const concluir = form.get("concluir") !== null;
+  const { error } = await supabase
+    .from("pedido_marcos")
+    .update({
+      previsto: texto(form, "previsto"),
+      realizado: concluir ? new Date().toISOString().slice(0, 10) : texto(form, "realizado"),
+      responsavel_id: texto(form, "responsavel_id"),
+    })
+    .eq("id", marcoId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/prazos");
+}
+
+/** Lança no financeiro, a pagar, a comissão do vendedor e a RT do arquiteto do pedido. */
+export async function lancarComissoes(pedidoId: string) {
+  const supabase = await createClient();
+  const { data: p, error: e1 } = await supabase
+    .from("pedidos_resumo")
+    .select("numero, unidade, comissoes_lancadas, vendedor_id, arquiteto_id, valor_comissao_vendedor, valor_comissao_arquiteto")
+    .eq("id", pedidoId)
+    .single();
+  if (e1) throw new Error(e1.message);
+  if (p.comissoes_lancadas) return;
+
+  const ids = [p.vendedor_id, p.arquiteto_id].filter(Boolean) as string[];
+  const { data: pessoas } = ids.length ? await supabase.from("parceiros").select("id, nome").in("id", ids) : { data: [] };
+  const nome = (id: string | null) => pessoas?.find((x) => x.id === id)?.nome ?? "";
+  const venc = new Date();
+  venc.setDate(venc.getDate() + 30);
+  const vencimento = venc.toISOString().slice(0, 10);
+
+  const linhas = [];
+  if (p.vendedor_id && Number(p.valor_comissao_vendedor) > 0) {
+    linhas.push({ tipo: "pagar" as const, unidade: p.unidade, categoria: "Comissão", pedido_id: pedidoId, vencimento, valor: Number(p.valor_comissao_vendedor), descricao: `Comissão ${nome(p.vendedor_id)} — pedido #${p.numero}` });
+  }
+  if (p.arquiteto_id && Number(p.valor_comissao_arquiteto) > 0) {
+    linhas.push({ tipo: "pagar" as const, unidade: p.unidade, categoria: "Comissão", pedido_id: pedidoId, vencimento, valor: Number(p.valor_comissao_arquiteto), descricao: `RT ${nome(p.arquiteto_id)} — pedido #${p.numero}` });
+  }
+  if (linhas.length) {
+    const { error } = await supabase.from("lancamentos").insert(linhas);
+    if (error) throw new Error(error.message);
+  }
+  await supabase.from("pedidos").update({ comissoes_lancadas: true }).eq("id", pedidoId);
+  revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/comissoes");
+  revalidatePath("/financeiro");
+}

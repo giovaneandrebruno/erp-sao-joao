@@ -6,7 +6,11 @@ import { CamposOrcamento } from "../campos";
 export default async function NovoOrcamentoPage({ searchParams }: PageProps<"/orcamentos/novo">) {
   const { cliente } = await searchParams;
   const supabase = await createClient();
-  const { data: clientes } = await supabase.from("clientes").select("id, nome").order("nome");
+  const [{ data: clientes }, { data: parceiros }, { data: cfg }] = await Promise.all([
+    supabase.from("clientes").select("id, nome").order("nome"),
+    supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
+    supabase.from("configuracoes").select("comissao_vendedor_padrao, comissao_arquiteto_padrao").single(),
+  ]);
 
   if (!clientes?.length) {
     return (
@@ -31,7 +35,7 @@ export default async function NovoOrcamentoPage({ searchParams }: PageProps<"/or
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>
-          <CamposOrcamento />
+          <CamposOrcamento novo parceiros={parceiros ?? []} o={{ comissao_vendedor_pct: cfg?.comissao_vendedor_padrao, comissao_arquiteto_pct: cfg?.comissao_arquiteto_padrao }} />
           <div className="md:col-span-6"><Botao type="submit">Criar e adicionar itens</Botao></div>
         </form>
       </Cartao>

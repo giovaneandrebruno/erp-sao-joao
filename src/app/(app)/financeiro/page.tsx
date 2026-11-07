@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
@@ -9,6 +10,7 @@ function mesAtual() {
 }
 
 export default async function FinanceiroPage({ searchParams }: PageProps<"/financeiro">) {
+  await connection();
   const sp = await searchParams;
   const tipo = sp.tipo === "receber" || sp.tipo === "pagar" ? sp.tipo : null;
   const situacao = sp.situacao === "abertos" || sp.situacao === "pagos" || sp.situacao === "vencidos" ? sp.situacao : null;
@@ -57,19 +59,19 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
       <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
         {situacao !== "vencidos" && (
           <span className="flex items-center gap-2">
-            <Link href={link({ mes: mesAnterior })} className="px-2 text-amber-800">←</Link>
+            <Link href={link({ mes: mesAnterior })} className="px-2 text-madeira-800">←</Link>
             <strong>{mes.split("-").reverse().join("/")}</strong>
-            <Link href={link({ mes: mesSeguinte })} className="px-2 text-amber-800">→</Link>
+            <Link href={link({ mes: mesSeguinte })} className="px-2 text-madeira-800">→</Link>
           </span>
         )}
         <span className="flex gap-3">
           {[[null, "Tudo"], ["receber", "A receber"], ["pagar", "A pagar"]].map(([k, r]) => (
-            <Link key={r} href={link({ tipo: k })} className={tipo === k ? "font-semibold text-amber-800" : "text-stone-500"}>{r}</Link>
+            <Link key={r} href={link({ tipo: k })} className={tipo === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
           ))}
         </span>
         <span className="flex gap-3">
           {[[null, "Todos"], ["abertos", "Em aberto"], ["pagos", "Pagos"], ["vencidos", "Vencidos"]].map(([k, r]) => (
-            <Link key={r} href={link({ situacao: k })} className={situacao === k ? "font-semibold text-amber-800" : "text-stone-500"}>{r}</Link>
+            <Link key={r} href={link({ situacao: k })} className={situacao === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
           ))}
         </span>
       </div>
@@ -89,7 +91,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
               <tr key={l.id}>
                 <td className={`px-4 py-3 ${vencido ? "font-semibold text-red-600" : ""}`}>{data(l.vencimento)}</td>
                 <td className="px-4 py-3">
-                  {l.pedido_id ? <Link href={`/pedidos/${l.pedido_id}`} className="text-amber-800 hover:underline">{l.descricao}</Link> : l.descricao}
+                  {l.pedido_id ? <Link href={`/pedidos/${l.pedido_id}`} className="text-madeira-800 hover:underline">{l.descricao}</Link> : l.descricao}
                   {l.categoria && <span className="ml-2 text-xs text-stone-400">{l.categoria}</span>}
                 </td>
                 <td className="px-4 py-3">{quem}</td>
@@ -103,7 +105,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
                   </form>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <form action={excluirLancamento.bind(null, l.id)}><button className="text-xs text-red-600 hover:underline">excluir</button></form>
+                  <form action={excluirLancamento.bind(null, l.id)}><button className="text-xs text-stone-400 hover:text-red-600 hover:underline">excluir</button></form>
                 </td>
               </tr>
             );

@@ -31,7 +31,7 @@ export default async function ProdutoPage({ params }: PageProps<"/estoque/[id]">
           <Cartao className="mb-6">
             <form action={registrarMovimento.bind(null, id)} className="grid gap-3 md:grid-cols-12">
               <Campo rotulo="Tipo" className="md:col-span-3">
-                <select name="tipo" className={inputCls}>
+                <select name="movimento" className={inputCls}>
                   {Object.entries(ROTULO_MOV).map(([k, r]) => <option key={k} value={k}>{r}</option>)}
                 </select>
               </Campo>

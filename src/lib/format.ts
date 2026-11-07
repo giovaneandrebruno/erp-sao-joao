@@ -48,3 +48,45 @@ export const ROTULOS = {
 export const ETAPAS = Object.keys(ROTULOS.etapa) as (keyof typeof ROTULOS.etapa)[];
 
 export const COR_PEDIDO = { aberto: "blue", em_producao: "amber", pronto: "green", entregue: "stone", cancelado: "red" } as const;
+
+export const ROTULOS2 = {
+  etapaNegociacao: {
+    novo: "Novo contato",
+    contato: "Em conversa",
+    medicao: "Medição",
+    projeto: "Projeto",
+    proposta: "Proposta enviada",
+    negociacao: "Negociação",
+    ganho: "Ganho",
+    perdido: "Perdido",
+  },
+  tipoParceiro: { vendedor: "Vendedor", arquiteto: "Arquiteto / designer", montador: "Montador" },
+  formaPagamento: {
+    pix: "Pix",
+    dinheiro: "Dinheiro",
+    boleto: "Boleto",
+    cartao_credito: "Cartão de crédito",
+    cartao_debito: "Cartão de débito",
+    financiamento: "Financiamento",
+  },
+  marco: {
+    medicao: "Medição",
+    projeto_executivo: "Projeto executivo",
+    compra_material: "Compra de material",
+    producao: "Produção concluída",
+    entrega: "Entrega",
+    montagem: "Montagem",
+    vistoria: "Vistoria final",
+  },
+  statusChamado: { aberto: "Aberto", agendado: "Agendado", em_atendimento: "Em atendimento", resolvido: "Resolvido" },
+} as const;
+
+export const ETAPAS_NEGOCIACAO = Object.keys(ROTULOS2.etapaNegociacao) as (keyof typeof ROTULOS2.etapaNegociacao)[];
+
+export function pct(valor: number | string | null | undefined) {
+  return `${Number(valor ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+}
+
+export function hojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}

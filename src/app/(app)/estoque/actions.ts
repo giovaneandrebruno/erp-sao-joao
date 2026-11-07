@@ -30,7 +30,7 @@ export async function registrarMovimento(produtoId: string, form: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("movimentos_estoque").insert({
     produto_id: produtoId,
-    tipo: (texto(form, "tipo") ?? "entrada") as "entrada" | "saida" | "ajuste",
+    tipo: (texto(form, "movimento") ?? "entrada") as "entrada" | "saida" | "ajuste",
     quantidade: numero(form, "quantidade") ?? 0,
     custo_unitario: numero(form, "custo_unitario"),
     referencia: texto(form, "referencia"),

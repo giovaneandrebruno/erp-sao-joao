@@ -20,7 +20,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
       <Tabela cabecalho={["Nome", "Telefone", "Cidade"]} vazio={!clientes?.length}>
         {clientes?.map((c) => (
           <tr key={c.id} className="hover:bg-stone-50">
-            <td className="px-4 py-3"><Link href={`/clientes/${c.id}`} className="font-medium text-amber-800 hover:underline">{c.nome}</Link></td>
+            <td className="px-4 py-3"><Link href={`/clientes/${c.id}`} className="font-medium text-madeira-800 hover:underline">{c.nome}</Link></td>
             <td className="px-4 py-3">{c.telefone ?? "—"}</td>
             <td className="px-4 py-3">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
           </tr>
