@@ -114,3 +114,25 @@ export async function aprovar(id: string) {
   revalidatePath("/pedidos");
   redirect(`/pedidos/${pedidoId}`);
 }
+
+export async function importarItens(orcamentoId: string, linhas: import("@/lib/importar").LinhaImportada[]) {
+  const supabase = await createClient();
+  const { data: cfg } = await supabase.from("configuracoes").select("markup_padrao").single();
+  const markup = Number(cfg?.markup_padrao ?? 1);
+  const { data: ult } = await supabase.from("orcamento_itens").select("ordem").eq("orcamento_id", orcamentoId).order("ordem", { ascending: false }).limit(1).maybeSingle();
+  const base = Number(ult?.ordem ?? 0);
+  const { error } = await supabase.from("orcamento_itens").insert(
+    linhas.slice(0, 2000).map((l, i) => ({
+      orcamento_id: orcamentoId,
+      ambiente: l.ambiente,
+      descricao: l.descricao || "Item",
+      quantidade: l.quantidade,
+      custo_unitario: l.custo_unitario ?? 0,
+      preco_unitario: l.preco_unitario ?? Math.round((l.custo_unitario ?? 0) * markup * 100) / 100,
+      ordem: base + i + 1,
+    })),
+  );
+  if (error) return error.message;
+  revalidatePath(`/orcamentos/${orcamentoId}`);
+  return null;
+}

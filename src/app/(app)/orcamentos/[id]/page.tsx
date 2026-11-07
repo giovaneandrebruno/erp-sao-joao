@@ -6,6 +6,7 @@ import { ROTULOS, brl } from "@/lib/format";
 import { adicionarItem, aprovar, atualizarOrcamento, mudarStatus, removerItem } from "../actions";
 import { CamposOrcamento } from "../campos";
 import { Previsao } from "../previsao";
+import { ImportarProjeto } from "../importar";
 
 export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[id]">) {
   const { id } = await params;
@@ -81,6 +82,8 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
           <p className="mt-2 text-xs text-stone-500">Só a equipe vê este quadro. Ele não sai no PDF do cliente.</p>
         </div>
       </div>
+
+      {editavel && <div className="mb-4"><ImportarProjeto orcamentoId={id} markup={Number(cfg?.markup_padrao ?? 1)} /></div>}
 
       {editavel && (
         <Cartao className="mb-8">
