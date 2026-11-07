@@ -2,6 +2,12 @@ import { Suspense } from "react";
 import { Marca } from "@/components/logo";
 import { Menu } from "./menu";
 import { sair } from "../login/actions";
+import { perfilAtual } from "@/lib/perfil";
+
+async function MenuDoUsuario() {
+  const perfil = await perfilAtual();
+  return <Menu papel={perfil?.papel ?? "vendedor"} />;
+}
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -9,7 +15,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <aside className="lateral print:hidden md:w-64 md:shrink-0">
         <div className="flex flex-col gap-8 px-5 py-6 md:sticky md:top-0 md:h-screen md:overflow-y-auto">
           <Marca />
-          <Suspense fallback={null}><Menu /></Suspense>
+          <Suspense fallback={null}><MenuDoUsuario /></Suspense>
           <form action={sair} className="md:mt-auto">
             <button className="flex items-center gap-2 px-3 text-sm text-stone-500 transition hover:text-stone-900">
               <span className="h-1.5 w-1.5 rounded-full bg-stone-400" /> Sair

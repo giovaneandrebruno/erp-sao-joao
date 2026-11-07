@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { podeAbrir, type Papel } from "@/lib/acesso";
 
 const GRUPOS = [
   {
@@ -17,15 +18,18 @@ const GRUPOS = [
     titulo: "Operação",
     itens: [
       { href: "/pedidos", rotulo: "Pedidos" },
+      { href: "/agenda", rotulo: "Agenda" },
       { href: "/prazos", rotulo: "Prazos" },
       { href: "/producao", rotulo: "Produção" },
       { href: "/assistencia", rotulo: "Assistência técnica" },
+      { href: "/campo", rotulo: "App do montador" },
     ],
   },
   {
     titulo: "Gestão",
     itens: [
       { href: "/financeiro", rotulo: "Financeiro" },
+      { href: "/relatorios", rotulo: "Relatórios" },
       { href: "/comissoes", rotulo: "Comissões" },
       { href: "/estoque", rotulo: "Estoque" },
       { href: "/fornecedores", rotulo: "Fornecedores" },
@@ -35,11 +39,11 @@ const GRUPOS = [
   },
 ];
 
-export function Menu() {
+export function Menu({ papel }: { papel: Papel }) {
   const caminho = usePathname();
   return (
     <nav className="flex gap-4 overflow-x-auto md:flex-col md:gap-6">
-      {GRUPOS.map((g) => (
+      {GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => podeAbrir(papel, i.href)) })).filter((g) => g.itens.length).map((g) => (
         <div key={g.titulo} className="flex gap-1 md:flex-col">
           <div className="hidden px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400 md:block">{g.titulo}</div>
           {g.itens.map((i) => {

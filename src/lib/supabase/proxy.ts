@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { inicioDo, podeAbrir, type Papel } from "@/lib/acesso";
 
-const ROTAS_PUBLICAS = ["/login", "/auth"];
+const ROTAS_PUBLICAS = ["/login", "/auth", "/p/"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,6 +34,23 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  if (logado && !publica) {
+    const { data: perfil } = await supabase.from("perfis").select("papel").eq("user_id", String(data!.claims.sub)).maybeSingle();
+    const papel = (perfil?.papel ?? null) as Papel | null;
+    const caminho = request.nextUrl.pathname;
+    if (!papel && caminho !== "/sem-acesso") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/sem-acesso";
+      return NextResponse.redirect(url);
+    }
+    if (papel && !podeAbrir(papel, caminho)) {
+      const url = request.nextUrl.clone();
+      url.pathname = inicioDo(papel);
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

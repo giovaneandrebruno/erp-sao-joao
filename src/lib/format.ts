@@ -87,6 +87,27 @@ export function pct(valor: number | string | null | undefined) {
   return `${Number(valor ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 }
 
-export function hojeISO() {
-  return new Date().toISOString().slice(0, 10);
+/** Data de hoje (AAAA-MM-DD) no fuso de São Paulo. */
+export function hojeISO(somarDias = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + somarDias);
+  return d.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+}
+
+/** Link do WhatsApp com mensagem pronta. Aceita telefone com ou sem DDI. */
+export function linkWhats(telefone: string | null | undefined, mensagem?: string) {
+  const n = String(telefone ?? "").replace(/\D/g, "");
+  if (n.length < 10) return null;
+  const numeroCompleto = n.length <= 11 ? `55${n}` : n;
+  return `https://wa.me/${numeroCompleto}${mensagem ? `?text=${encodeURIComponent(mensagem)}` : ""}`;
+}
+
+/** Troca {cliente}, {valor}, {data}... pelos valores informados. */
+export function preencher(modelo: string, valores: Record<string, string | null | undefined>) {
+  return modelo.replace(/\{(\w+)\}/g, (_, chave: string) => valores[chave] ?? "");
+}
+
+export function linkMapa(endereco: string | null | undefined, cidade?: string | null, uf?: string | null) {
+  const q = [endereco, cidade, uf].filter(Boolean).join(", ");
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
 }

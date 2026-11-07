@@ -1,11 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
 import { ROTULOS2, pct } from "@/lib/format";
-import { alternarAtivo, criarParceiro } from "./actions";
+import { alternarAtivo, atualizarPerfil, criarParceiro } from "./actions";
+import { NovoUsuario } from "./novo-usuario";
+import { ROTULO_PAPEL } from "@/lib/acesso";
+import { perfilAtual } from "@/lib/perfil";
 
 export default async function EquipePage() {
   const supabase = await createClient();
-  const { data: parceiros } = await supabase.from("parceiros").select("*").order("tipo").order("nome");
+  const [{ data: parceiros }, { data: perfis }, eu] = await Promise.all([
+    supabase.from("parceiros").select("*").order("tipo").order("nome"),
+    supabase.from("perfis").select("*").order("criado_em"),
+    perfilAtual(),
+  ]);
+  const podeCriar = Boolean(process.env.SUPABASE_SECRET_KEY);
 
   return (
     <>
@@ -42,6 +50,39 @@ export default async function EquipePage() {
           <Campo rotulo="Chave Pix" className="md:col-span-2"><input name="chave_pix" className={inputCls} /></Campo>
           <div className="md:col-span-6"><Botao type="submit">Adicionar</Botao></div>
         </form>
+      </Cartao>
+
+      <h2 className="mb-1 mt-12 text-xl font-semibold tracking-tight">Usuários e acessos</h2>
+      <p className="mb-4 text-sm text-stone-500">Administrador vê tudo. Escritório / vendas não vê financeiro, comissões, relatórios, equipe e configurações. Montador só usa o app de campo e precisa estar ligado à pessoa da equipe.</p>
+      <div className="mb-6">
+        <Tabela cabecalho={["E-mail", "Nome", "Perfil", "Pessoa da equipe", ""]} vazio={!perfis?.length}>
+          {perfis?.map((u) => (
+            <tr key={u.user_id}>
+              <td colSpan={5} className="py-2">
+                <form action={atualizarPerfil.bind(null, u.user_id)} className="grid items-center gap-3 md:grid-cols-[1.4fr_1fr_1.2fr_1fr_auto]">
+                  <span className="text-sm font-medium">{u.email}{u.user_id === eu?.user_id && <span className="ml-2 text-xs text-stone-400">(você)</span>}</span>
+                  <input name="nome" defaultValue={u.nome ?? ""} placeholder="nome" className={inputCls} />
+                  <select name="papel" defaultValue={u.papel} className={inputCls}>
+                    {Object.entries(ROTULO_PAPEL).map(([k, r]) => <option key={k} value={k}>{r}</option>)}
+                  </select>
+                  <select name="parceiro_id" defaultValue={u.parceiro_id ?? ""} className={inputCls}>
+                    <option value="">—</option>
+                    {parceiros?.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                  <button className="text-sm font-medium text-violeta hover:underline">salvar</button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
+      </div>
+      <Cartao>
+        <h2 className="mb-3 font-semibold">Criar usuário</h2>
+        {podeCriar ? (
+          <NovoUsuario parceiros={(parceiros ?? []).filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
+        ) : (
+          <p className="text-sm text-stone-500">Para criar usuários por aqui, cadastre a chave secreta do Supabase no Vercel (SUPABASE_SECRET_KEY). Enquanto isso, crie em Supabase › Authentication › Add user: a pessoa aparece nesta lista para você definir o perfil.</p>
+        )}
       </Cartao>
     </>
   );

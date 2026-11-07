@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Titulo } from "@/components/ui";
-import { ROTULOS, brl, data, pct } from "@/lib/format";
+import { ROTULOS, brl, data, hojeISO, pct } from "@/lib/format";
 
 export default async function PainelPage() {
   const supabase = await createClient();
-  const agora = new Date();
-  const hoje = agora.toISOString().slice(0, 10);
+  const hoje = hojeISO();
   const inicioMes = `${hoje.slice(0, 7)}-01`;
-  agora.setDate(agora.getDate() + 7);
-  const daqui7 = agora.toISOString().slice(0, 10);
+  const daqui7 = hojeISO(7);
 
   const [vendasMes, negociacoes, pedidosAtivos, marcosAtrasados, vencidos, semana, produtos, chamados] = await Promise.all([
     supabase.from("pedidos_resumo").select("total, lucro").gte("criado_em", inicioMes).neq("status", "cancelado"),

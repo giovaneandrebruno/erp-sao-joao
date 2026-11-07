@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Titulo } from "@/components/ui";
-import { ETAPAS, ROTULOS, data } from "@/lib/format";
+import { ETAPAS, ROTULOS, data, hojeISO } from "@/lib/format";
 import { moverEtapa } from "./actions";
 
 export default async function ProducaoPage({ searchParams }: PageProps<"/producao">) {
@@ -13,7 +13,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
     .order("prazo", { ascending: true, nullsFirst: false });
   if (!concluidas) consulta = consulta.neq("etapa", "concluido");
   const { data: ordens } = await consulta;
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISO();
   const colunas = concluidas ? ETAPAS : ETAPAS.filter((e) => e !== "concluido");
 
   return (

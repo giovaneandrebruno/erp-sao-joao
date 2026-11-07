@@ -6,14 +6,12 @@ import { ROTULOS2, data, hojeISO } from "@/lib/format";
 export default async function PrazosPage() {
   const supabase = await createClient();
   const hoje = hojeISO();
-  const limite = new Date();
-  limite.setDate(limite.getDate() + 21);
   const { data: marcos } = await supabase
     .from("pedido_marcos")
     .select("id, tipo, previsto, pedido_id, pedidos!inner(numero, status, clientes(nome)), responsavel:responsavel_id(nome)")
     .is("realizado", null)
     .not("previsto", "is", null)
-    .lte("previsto", limite.toISOString().slice(0, 10))
+    .lte("previsto", hojeISO(21))
     .not("pedidos.status", "in", "(entregue,cancelado)")
     .order("previsto");
 

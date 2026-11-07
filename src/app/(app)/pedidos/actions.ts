@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { numero, texto } from "@/lib/format";
+import { numero, texto, hojeISO } from "@/lib/format";
 
 type StatusPedido = "aberto" | "em_producao" | "pronto" | "entregue" | "cancelado";
 
@@ -43,13 +43,13 @@ export async function gerarParcelas(pedidoId: string, form: FormData) {
   if (total <= 0) return;
   const entrada = Math.min(numero(form, "entrada") ?? 0, total);
   const qtd = Math.max(0, Math.floor(numero(form, "parcelas") ?? 0));
-  const primeiro = texto(form, "primeiro_vencimento") ?? new Date().toISOString().slice(0, 10);
+  const primeiro = texto(form, "primeiro_vencimento") ?? hojeISO();
   const forma = texto(form, "forma_pagamento");
 
   const base = { tipo: "receber" as const, unidade: p.unidade, cliente_id: p.cliente_id, pedido_id: pedidoId, categoria: "Venda", forma_pagamento: forma };
   const linhas = [];
   if (entrada > 0) {
-    linhas.push({ ...base, descricao: `Pedido #${p.numero} — entrada`, valor: entrada, vencimento: new Date().toISOString().slice(0, 10) });
+    linhas.push({ ...base, descricao: `Pedido #${p.numero} — entrada`, valor: entrada, vencimento: hojeISO() });
   }
   const restante = Math.round((total - entrada) * 100);
   if (qtd > 0 && restante > 0) {
@@ -75,7 +75,7 @@ export async function atualizarMarco(pedidoId: string, marcoId: string, form: Fo
     .from("pedido_marcos")
     .update({
       previsto: texto(form, "previsto"),
-      realizado: concluir ? new Date().toISOString().slice(0, 10) : texto(form, "realizado"),
+      realizado: concluir ? hojeISO() : texto(form, "realizado"),
       responsavel_id: texto(form, "responsavel_id"),
     })
     .eq("id", marcoId);
