@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Logo } from "@/components/logo";
 import { ROTULOS2, brl, data, hojeISO } from "@/lib/format";
 import { Aceite } from "./aceite";
 
@@ -44,7 +43,7 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
     <main className="mx-auto max-w-3xl px-4 py-10 md:py-16">
       <header className="mb-10 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Logo tamanho={40} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violeta to-ciano text-lg font-semibold text-white">{p.empresa.nome.slice(0, 1)}</div>
           <div>
             <div className="text-lg font-semibold tracking-tight text-stone-900">{p.empresa.nome}</div>
             <div className="text-xs text-stone-500">{[p.empresa.cidade, p.empresa.uf].filter(Boolean).join(" / ")}</div>
@@ -55,12 +54,12 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
         </div>
       </header>
 
-      <section className="borda-gradiente relative mb-8 overflow-hidden rounded-3xl p-8">
+      <section className="borda-gradiente relative mb-8 overflow-hidden rounded-3xl p-6 sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violeta/15 blur-3xl" />
         <p className="text-sm text-stone-500">Proposta preparada para</p>
         <h1 className="mb-6 text-3xl font-semibold tracking-tight text-stone-900">{p.cliente}</h1>
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Investimento</p>
-        <p className="texto-gradiente font-mono text-5xl font-semibold tracking-tighter">{brl(p.total)}</p>
+        <p className="texto-gradiente break-words font-mono text-4xl font-semibold tracking-tighter sm:text-5xl">{brl(p.total)}</p>
         <p className="mt-2 text-sm text-stone-500">
           {ROTULOS2.formaPagamento[p.forma_pagamento]}{p.parcelas > 1 ? ` em ${p.parcelas}×` : ""}
           {p.prazo_entrega_dias ? ` · entrega em ${p.prazo_entrega_dias} dias` : ""}

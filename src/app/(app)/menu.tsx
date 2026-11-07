@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { podeAbrir, type Papel } from "@/lib/acesso";
 
@@ -39,13 +40,29 @@ const GRUPOS = [
   },
 ];
 
-export function Menu({ papel }: { papel: Papel }) {
+export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode; rodape: ReactNode }) {
   const caminho = usePathname();
+  const [aberto, setAberto] = useState(false);
   return (
-    <nav className="flex gap-4 overflow-x-auto md:flex-col md:gap-6">
+    <>
+      <div className="flex items-center justify-between">
+        {marca}
+        <button
+          type="button"
+          onClick={() => setAberto(!aberto)}
+          aria-expanded={aberto}
+          aria-label="Abrir menu"
+          className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-xl bg-white/[0.06] md:hidden"
+        >
+          <span className={`h-0.5 w-5 rounded bg-stone-900 transition ${aberto ? "translate-y-1 rotate-45" : ""}`} />
+          <span className={`h-0.5 w-5 rounded bg-stone-900 transition ${aberto ? "-translate-y-1 -rotate-45" : ""}`} />
+        </button>
+      </div>
+      <div className={`${aberto ? "flex" : "hidden"} flex-1 flex-col gap-8 md:flex`} onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setAberto(false); }}>
+    <nav className="grid grid-cols-2 gap-x-2 gap-y-6 md:flex md:flex-col md:gap-6">
       {GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => podeAbrir(papel, i.href)) })).filter((g) => g.itens.length).map((g) => (
-        <div key={g.titulo} className="flex gap-1 md:flex-col">
-          <div className="hidden px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400 md:block">{g.titulo}</div>
+        <div key={g.titulo} className="flex flex-col gap-1">
+          <div className="px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">{g.titulo}</div>
           {g.itens.map((i) => {
             const ativo = i.href === "/" ? caminho === "/" : caminho.startsWith(i.href);
             return (
@@ -62,5 +79,8 @@ export function Menu({ papel }: { papel: Papel }) {
         </div>
       ))}
     </nav>
+        {rodape}
+      </div>
+    </>
   );
 }

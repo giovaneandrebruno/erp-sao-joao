@@ -134,3 +134,9 @@ begin
   values (c[6], 'Porta do armário da cozinha desalinhada e batendo', 'agendado', 'normal', current_date + 2, v_mont2),
          (c[8], 'Corrediça da gaveta do banheiro travando', 'aberto', 'alta', null, null);
 end $$;
+
+-- Fase 4: endereço de exemplo e serviços atribuídos ao montador (para testar o app de campo)
+update clientes set endereco = 'Rua das Palmeiras, 120', cidade = 'São José do Rio Preto', uf = 'SP'
+ where nome like 'Bruno%' and endereco is null;
+update pedido_marcos m set responsavel_id = (select id from parceiros where nome like 'Marcos%' limit 1)
+  from pedidos p where p.id = m.pedido_id and p.numero = 1 and m.tipo in ('entrega', 'montagem');

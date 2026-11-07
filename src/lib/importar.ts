@@ -69,8 +69,10 @@ export function lerPlanilha(texto: string): { linhas: LinhaImportada[]; avisos: 
     const pega = (k: keyof typeof CAMPOS) => (idx[k] !== undefined ? col[idx[k]!] : undefined);
     let descricao = (pega("descricao") ?? col[0] ?? "").trim();
     if (!descricao) continue;
-    const medidas = [pega("largura"), pega("altura"), pega("profundidade")].map(numeroBR);
-    if (medidas.some((m) => m)) descricao += ` (${medidas.map((m) => m ?? "–").join(" × ")})`;
+    const medidas = (["L", "A", "P"] as const)
+      .map((r, i) => [r, numeroBR([pega("largura"), pega("altura"), pega("profundidade")][i])] as const)
+      .filter(([, v]) => v);
+    if (medidas.length) descricao += ` (${medidas.map(([r, v]) => `${r} ${v}`).join(" × ")} mm)`;
     const quantidade = numeroBR(pega("quantidade")) ?? 1;
     if (quantidade <= 0) { avisos.push(`Linha ${n + 1}: quantidade zerada, ignorada.`); continue; }
     linhas.push({
