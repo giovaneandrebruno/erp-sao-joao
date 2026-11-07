@@ -80,8 +80,8 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
         </div>
       )}
 
-      <div className="mb-8 grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+      <div className="mb-8 grid gap-6 2xl:grid-cols-3">
+        <div className="2xl:col-span-2">
           <h2 className="mb-3 text-lg font-semibold">Itens</h2>
           <Tabela cabecalho={["Ambiente", "Descrição", "Qtd", "Custo unit.", "Venda unit.", "Total", ""]} vazio={!itens?.length}>
             {itens?.map((i) => (
