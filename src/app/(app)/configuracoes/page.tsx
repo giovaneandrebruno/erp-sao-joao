@@ -53,6 +53,23 @@ export default async function ConfiguracoesPage() {
           <textarea name="clausulas_contrato" rows={10} defaultValue={String(v("clausulas_contrato"))} className={`${inputCls} w-full`} />
         </Cartao>
 
+        <Cartao>
+          <h2 className="mb-1 font-semibold">Mensagens prontas de WhatsApp</h2>
+          <p className="mb-4 text-sm text-stone-500">Use {"{cliente}"}, {"{empresa}"}, {"{valor}"}, {"{data}"}, {"{etapa}"} e {"{link}"}: o sistema troca pelos dados de cada cliente.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {([
+              ["msg_orcamento", "Envio da proposta"],
+              ["msg_agendamento", "Aviso de medição, entrega e montagem"],
+              ["msg_cobranca", "Lembrete de parcela"],
+              ["msg_pos_venda", "Pós-venda"],
+            ] as const).map(([k, r]) => (
+              <Campo key={k} rotulo={r}>
+                <textarea name={k} rows={4} defaultValue={String(v(k) ?? "")} className={`${inputCls} w-full`} />
+              </Campo>
+            ))}
+          </div>
+        </Cartao>
+
         <div><Botao type="submit">Salvar configurações</Botao></div>
       </form>
     </>

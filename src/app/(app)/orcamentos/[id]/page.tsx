@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl } from "@/lib/format";
+import { ROTULOS, brl, data, linkWhats, preencher } from "@/lib/format";
+import { enderecoDoSite } from "@/lib/site";
+import { Copiar } from "@/components/copiar";
 import { adicionarItem, aprovar, atualizarOrcamento, mudarStatus, removerItem } from "../actions";
 import { CamposOrcamento } from "../campos";
 import { Previsao } from "../previsao";
@@ -17,10 +19,20 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
     supabase.from("produtos").select("id, nome, preco_venda").eq("ativo", true).order("nome"),
     supabase.from("pedidos").select("id, numero").eq("orcamento_id", id).maybeSingle(),
     supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
-    supabase.from("configuracoes").select("margem_minima, markup_padrao").single(),
+    supabase.from("configuracoes").select("margem_minima, markup_padrao, nome_fantasia, msg_orcamento").single(),
+  ]);
+  const [{ data: extra }, { data: cli }, site] = await Promise.all([
+    supabase.from("orcamentos").select("token, visualizado_em, aceite_em, aceite_nome").eq("id", id).maybeSingle(),
+    supabase.from("clientes").select("telefone").eq("id", o?.cliente_id ?? "").maybeSingle(),
+    enderecoDoSite(),
   ]);
   if (!o) notFound();
   const editavel = o.status !== "aprovado";
+  const linkProposta = extra ? `${site}/p/${extra.token}` : null;
+  const msgWhats = linkProposta
+    ? preencher(cfg?.msg_orcamento ?? "{link}", { cliente: o.cliente_nome?.split(" ")[0], empresa: cfg?.nome_fantasia, valor: brl(o.total), link: linkProposta })
+    : undefined;
+  const whats = linkWhats(cli?.telefone, msgWhats);
   const ambientes = Array.from(new Set((itens ?? []).map((i) => i.ambiente).filter(Boolean))) as string[];
 
   return (
@@ -28,7 +40,7 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
       <Titulo
         acao={
           <div className="flex flex-wrap gap-2">
-            <Link href={`/orcamentos/${id}/imprimir`} className="rounded-md border border-stone-300 bg-superficie px-4 py-2 text-sm">Imprimir / PDF</Link>
+            <Link href={`/orcamentos/${id}/imprimir`} className="rounded-full border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-800 transition hover:border-violeta/40 hover:text-violeta">Imprimir / PDF</Link>
             {o.status === "rascunho" && (
               <form action={mudarStatus.bind(null, id, "enviado")}><Botao variante="secundario">Marcar como enviado</Botao></form>
             )}
@@ -48,6 +60,25 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
         Cliente: <Link href={`/clientes/${o.cliente_id}`} className="font-medium text-madeira-700 hover:underline">{o.cliente_nome}</Link>
         {pedido && <> · Virou o <Link href={`/pedidos/${pedido.id}`} className="font-medium text-madeira-700 hover:underline">pedido #{pedido.numero}</Link></>}
       </p>
+
+      {linkProposta && (itens?.length ?? 0) > 0 && (
+        <div className="vidro mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 font-semibold">
+              Proposta online
+              {extra?.aceite_em ? <Selo cor="green">Aceita por {extra.aceite_nome} em {data(extra.aceite_em)}</Selo>
+                : extra?.visualizado_em ? <Selo cor="blue">Cliente abriu em {data(extra.visualizado_em)}</Selo>
+                : <Selo>Ainda não aberta</Selo>}
+            </div>
+            <p className="truncate text-sm text-stone-500">O cliente vê os itens por ambiente, o valor e pode aceitar pelo celular. Custos e lucro não aparecem.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a href={linkProposta} target="_blank" rel="noreferrer" className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-800 transition hover:border-violeta/40 hover:text-violeta">Ver como cliente</a>
+            <Copiar texto={linkProposta} />
+            {whats && <a href={whats} target="_blank" rel="noreferrer" className="rounded-full bg-[#25d366] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105">Enviar no WhatsApp</a>}
+          </div>
+        </div>
+      )}
 
       <div className="mb-8 grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

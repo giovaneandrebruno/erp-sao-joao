@@ -17,7 +17,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
 
   return (
     <>
-      <Titulo acao={<div className="flex gap-2"><Link href={`/crm/nova?cliente=${id}`} className="rounded-md border border-stone-300 bg-superficie px-4 py-2 text-sm">Nova negociação</Link><BotaoLink href={`/orcamentos/novo?cliente=${id}`}>Novo orçamento</BotaoLink></div>}>{cliente.nome}</Titulo>
+      <Titulo acao={<div className="flex gap-2"><Link href={`/crm/nova?cliente=${id}`} className="rounded-full border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-800 transition hover:border-violeta/40 hover:text-violeta">Nova negociação</Link><BotaoLink href={`/orcamentos/novo?cliente=${id}`}>Novo orçamento</BotaoLink></div>}>{cliente.nome}</Titulo>
       <Cartao className="mb-8"><FormCliente cliente={cliente} /></Cartao>
 
       <h2 className="mb-3 text-lg font-semibold">Orçamentos</h2>

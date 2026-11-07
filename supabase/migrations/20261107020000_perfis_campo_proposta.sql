@@ -137,13 +137,14 @@ declare
 begin
   select * into v_orc from orcamentos where token = p_token;
   if not found then return null; end if;
-  if v_orc.visualizado_em is null then
+  -- só conta a visualização quando quem abre é o cliente (sem login)
+  if v_orc.visualizado_em is null and auth.uid() is null then
     update orcamentos set visualizado_em = now() where id = v_orc.id;
   end if;
   select jsonb_build_object(
     'numero', r.numero, 'status', r.status, 'validade', r.validade, 'criado_em', r.criado_em,
     'observacoes', r.observacoes, 'prazo_entrega_dias', r.prazo_entrega_dias,
-    'forma_pagamento', r.forma_pagamento, 'parcelas', r.parcelas,
+    'forma_pagamento', r.forma_pagamento, 'parcelas', r.parcelas, 'condicoes_pagamento', r.condicoes_pagamento,
     'subtotal', r.subtotal, 'desconto', r.desconto, 'total', r.total,
     'aceite_em', v_orc.aceite_em, 'aceite_nome', v_orc.aceite_nome,
     'cliente', r.cliente_nome,

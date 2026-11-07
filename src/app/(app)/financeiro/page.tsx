@@ -2,11 +2,11 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl, data } from "@/lib/format";
+import { ROTULOS, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
 import { criarLancamento, excluirLancamento, marcarPago } from "./actions";
 
 function mesAtual() {
-  return new Date().toISOString().slice(0, 7);
+  return hojeISO().slice(0, 7);
 }
 
 export default async function FinanceiroPage({ searchParams }: PageProps<"/financeiro">) {
@@ -15,16 +15,17 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
   const tipo = sp.tipo === "receber" || sp.tipo === "pagar" ? sp.tipo : null;
   const situacao = sp.situacao === "abertos" || sp.situacao === "pagos" || sp.situacao === "vencidos" ? sp.situacao : null;
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : mesAtual();
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISO();
 
   const supabase = await createClient();
   const [ano, m] = mes.split("-").map(Number);
   const inicio = `${mes}-01`;
   const fim = new Date(Date.UTC(ano, m, 0)).toISOString().slice(0, 10);
 
+  const { data: cfg } = await supabase.from("configuracoes").select("nome_fantasia, msg_cobranca").single();
   let consulta = supabase
     .from("lancamentos")
-    .select("id, tipo, unidade, descricao, categoria, valor, vencimento, pago_em, pedido_id, clientes(nome), fornecedores(nome)")
+    .select("id, tipo, unidade, descricao, categoria, valor, vencimento, pago_em, pedido_id, clientes(nome, telefone), fornecedores(nome)")
     .order("vencimento");
   if (situacao === "vencidos") consulta = consulta.is("pago_em", null).lt("vencimento", hoje);
   else consulta = consulta.gte("vencimento", inicio).lte("vencimento", fim);
@@ -85,6 +86,10 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
       <div className="mb-8">
         <Tabela cabecalho={["Vencimento", "Descrição", "Quem", "Unidade", "Valor", "Situação", ""]} vazio={!lancamentos?.length}>
           {lancamentos?.map((l) => {
+            const cli = l.clientes as unknown as { nome: string; telefone: string | null } | null;
+            const cobrar = l.tipo === "receber" && !l.pago_em && cli
+              ? linkWhats(cli.telefone, preencher(cfg?.msg_cobranca ?? "", { cliente: cli.nome.split(" ")[0], empresa: cfg?.nome_fantasia, valor: brl(l.valor), data: data(l.vencimento) }))
+              : null;
             const quem = (l.clientes as unknown as { nome: string } | null)?.nome ?? (l.fornecedores as unknown as { nome: string } | null)?.nome ?? "—";
             const vencido = !l.pago_em && l.vencimento < hoje;
             return (
@@ -104,8 +109,9 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
                     </button>
                   </form>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <form action={excluirLancamento.bind(null, l.id)}><button className="text-xs text-stone-400 hover:text-red-600 hover:underline">excluir</button></form>
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  {cobrar && <a href={cobrar} target="_blank" rel="noreferrer" className="mr-3 text-xs font-medium text-[#1da851] hover:underline">cobrar</a>}
+                  <form className="inline" action={excluirLancamento.bind(null, l.id)}><button className="text-xs text-stone-400 hover:text-red-600 hover:underline">excluir</button></form>
                 </td>
               </tr>
             );

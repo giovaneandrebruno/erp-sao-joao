@@ -28,6 +28,11 @@ export async function salvarConfiguracoes(form: FormData) {
       margem_minima: n("margem_minima", 0),
       validade_orcamento_dias: Math.round(n("validade_orcamento_dias", 15)),
       clausulas_contrato: texto(form, "clausulas_contrato") ?? "",
+      ...Object.fromEntries(
+        (["msg_orcamento", "msg_agendamento", "msg_cobranca", "msg_pos_venda"] as const)
+          .map((k) => [k, texto(form, k)])
+          .filter(([, val]) => val),
+      ),
     })
     .eq("id", true);
   if (error) throw new Error(error.message);
