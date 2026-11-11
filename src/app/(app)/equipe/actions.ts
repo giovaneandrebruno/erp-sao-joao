@@ -44,18 +44,18 @@ export async function atualizarPerfil(userId: string, form: FormData) {
 
 export async function criarUsuario(_: string | null, form: FormData): Promise<string | null> {
   await exigirAdmin();
-  const { clienteAdmin } = await import("@/lib/supabase/admin");
-  const admin = clienteAdmin();
-  if (!admin) return "Falta configurar a chave secreta (SUPABASE_SECRET_KEY) no Vercel.";
   const email = texto(form, "email");
   const senha = texto(form, "senha");
   if (!email || !senha || senha.length < 8) return "Informe e-mail e uma senha com pelo menos 8 caracteres.";
-  const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
-  if (error) return error.message.includes("already") ? "Já existe um usuário com esse e-mail." : error.message;
-  const { error: e2 } = await admin
-    .from("perfis")
-    .upsert({ user_id: data.user.id, email, nome: texto(form, "nome"), papel: (texto(form, "papel") ?? "vendedor") as "vendedor", parceiro_id: texto(form, "parceiro_id") });
-  if (e2) return e2.message;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_criar_usuario", {
+    p_email: email,
+    p_senha: senha,
+    p_nome: texto(form, "nome") ?? "",
+    p_papel: (texto(form, "papel") ?? "vendedor") as "vendedor",
+    p_parceiro: texto(form, "parceiro_id") ?? undefined,
+  });
+  if (error) return error.message;
   revalidatePath("/equipe");
   return "ok";
 }
