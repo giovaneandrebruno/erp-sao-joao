@@ -13,7 +13,6 @@ export default async function EquipePage() {
     supabase.from("perfis").select("*").order("criado_em"),
     perfilAtual(),
   ]);
-  const podeCriar = Boolean(process.env.SUPABASE_SECRET_KEY);
 
   return (
     <>
@@ -78,11 +77,7 @@ export default async function EquipePage() {
       </div>
       <Cartao>
         <h2 className="mb-3 font-semibold">Criar usuário</h2>
-        {podeCriar ? (
-          <NovoUsuario parceiros={(parceiros ?? []).filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
-        ) : (
-          <p className="text-sm text-stone-500">Para criar usuários por aqui, cadastre a chave secreta do Supabase no Vercel (SUPABASE_SECRET_KEY). Enquanto isso, crie em Supabase › Authentication › Add user: a pessoa aparece nesta lista para você definir o perfil.</p>
-        )}
+        <NovoUsuario parceiros={(parceiros ?? []).filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
       </Cartao>
     </>
   );

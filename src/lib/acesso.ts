@@ -10,7 +10,7 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
 export const SO_ADMIN = ["/financeiro", "/comissoes", "/configuracoes", "/equipe", "/relatorios"];
 
 /** Telas abertas ao montador. */
-export const DO_MONTADOR = ["/campo"];
+export const DO_MONTADOR = ["/campo", "/conta"];
 
 export function podeAbrir(papel: Papel | null | undefined, caminho: string) {
   if (!papel) return false;
