@@ -18,6 +18,7 @@ Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 | Operação | Assistência técnica | Chamados de pós-venda com visita, montador e garantia |
 | Operação | App do montador | Tela de celular com os serviços do dia, como chegar, WhatsApp, check-in com localização, fotos e conclusão |
 | Gestão | Financeiro | Contas a pagar e a receber por mês, vencidos e saldo previsto |
+| Gestão | Análises | Painéis de vendas, funil, produção e prazos e financeiro com gráficos, comparação com o mês e o ano anteriores, previsão de vendas e de caixa para 3 meses, alerta de gasto fora do normal e avisos automáticos do que merece atenção |
 | Gestão | Relatórios | Vendas e lucro do mês, caixa, últimos 12 meses, vendas por vendedor, despesas por categoria, origem dos clientes e motivos de perda |
 | Gestão | Comissões | Comissão de vendedores e RT de arquitetos por mês |
 | Gestão | Estoque | Matéria-prima e produtos, movimentações e alerta de mínimo |

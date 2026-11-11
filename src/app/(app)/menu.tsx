@@ -30,6 +30,7 @@ const GRUPOS = [
     titulo: "Gestão",
     itens: [
       { href: "/financeiro", rotulo: "Financeiro" },
+      { href: "/analises", rotulo: "Análises" },
       { href: "/relatorios", rotulo: "Relatórios" },
       { href: "/comissoes", rotulo: "Comissões" },
       { href: "/estoque", rotulo: "Estoque" },
