@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Indicador, Tabela, Titulo } from "@/components/ui";
 import { ROTULOS, brl, hojeISO, pct } from "@/lib/format";
+import { Colunas } from "@/components/graficos/graficos";
+import { Legenda } from "@/components/graficos/paineis";
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
@@ -54,7 +56,6 @@ export default async function RelatoriosPage({ searchParams }: PageProps<"/relat
     const ps = (pedidos12 ?? []).filter((p) => p.criado_em.slice(0, 7) === mm);
     return { mes: mm, vendido: ps.reduce((s, p) => s + Number(p.total), 0), lucro: ps.reduce((s, p) => s + Number(p.lucro), 0), qtd: ps.length };
   });
-  const maximo = Math.max(1, ...serie.map((s) => s.vendido));
 
   const origens = new Map<string, { total: number; ganhos: number; perdidos: number; valorGanho: number }>();
   for (const n of negs ?? []) {
@@ -103,24 +104,14 @@ export default async function RelatoriosPage({ searchParams }: PageProps<"/relat
       <section className="mb-10">
         <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Vendas nos últimos 12 meses</h2>
         <Cartao>
-          <div className="flex h-56 items-end gap-2" role="img" aria-label="Valor vendido por mês nos últimos 12 meses">
-            {serie.map((s) => (
-              <Link key={s.mes} href={qs({ mes: s.mes })} className="group relative flex h-full flex-1 flex-col justify-end">
-                <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block">
-                  <div className="font-semibold">{MESES[Number(s.mes.slice(5)) - 1]}/{s.mes.slice(0, 4)}</div>
-                  <div>Vendido {brl(s.vendido)}</div>
-                  <div>Lucro {brl(s.lucro)} · {s.qtd} pedido(s)</div>
-                </div>
-                <div
-                  className={`w-full rounded-t-[4px] transition ${s.mes === mes ? "bg-gradient-to-t from-violeta to-ciano" : "bg-violeta/25 group-hover:bg-violeta/45"}`}
-                  style={{ height: `${Math.max(s.vendido ? 2 : 0, (s.vendido / maximo) * 100)}%` }}
-                />
-              </Link>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-2 border-t border-stone-200 pt-2">
-            {serie.map((s) => <div key={s.mes} className={`flex-1 text-center text-[11px] ${s.mes === mes ? "font-semibold text-stone-900" : "text-stone-400"}`}>{MESES[Number(s.mes.slice(5)) - 1]}</div>)}
-          </div>
+          <Colunas
+            rotulos={serie.map((s) => MESES[Number(s.mes.slice(5)) - 1])}
+            series={[{ nome: "Vendido", valores: serie.map((s) => s.vendido) }, { nome: "Lucro", valores: serie.map((s) => s.lucro) }]}
+            destaque={serie.findIndex((s) => s.mes === mes)}
+            links={serie.map((s) => qs({ mes: s.mes }))}
+            altura={240}
+          />
+          <div className="mt-3"><Legenda itens={[{ nome: "Vendido" }, { nome: "Lucro" }]} /></div>
         </Cartao>
       </section>
 
