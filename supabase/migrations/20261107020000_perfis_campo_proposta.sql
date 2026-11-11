@@ -82,22 +82,27 @@ Qualquer dúvida, estou à disposição.',
 
 -- ---------------------------------------------------------------- permissões
 -- Escritório (admin e vendedor) mantém acesso total; montador só enxerga o próprio serviço.
+-- A regra antiga (todo usuário logado vê tudo) é ajustada no lugar, sem apagar nada.
 do $$
 declare t text;
 begin
-  for t in select tablename from pg_tables where schemaname = 'public' and tablename not in ('perfis')
+  for t in select tablename from pg_tables where schemaname = 'public' and tablename not in ('perfis', 'configuracoes')
   loop
     execute format('alter table %I enable row level security', t);
-    execute format('drop policy if exists "funcionarios_acesso_total" on %I', t);
-    execute format('create policy "escritorio_acesso_total" on %I for all to authenticated using (public.eh_escritorio()) with check (public.eh_escritorio())', t);
+    if exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and policyname = 'funcionarios_acesso_total') then
+      execute format('alter policy "funcionarios_acesso_total" on %I rename to "escritorio_acesso_total"', t);
+      execute format('alter policy "escritorio_acesso_total" on %I to authenticated using (public.eh_escritorio()) with check (public.eh_escritorio())', t);
+    else
+      execute format('create policy "escritorio_acesso_total" on %I for all to authenticated using (public.eh_escritorio()) with check (public.eh_escritorio())', t);
+    end if;
     execute format('grant select, insert, update, delete on %I to authenticated', t);
   end loop;
 end $$;
 
--- Configurações e equipe: só o administrador altera.
-drop policy "escritorio_acesso_total" on configuracoes;
+-- Configurações: todos os funcionários leem; só o administrador altera.
+alter policy "funcionarios_acesso_total" on configuracoes rename to "admin_altera";
+alter policy "admin_altera" on configuracoes to authenticated using (public.eh_admin()) with check (public.eh_admin());
 create policy "escritorio_le" on configuracoes for select to authenticated using (true);
-create policy "admin_altera" on configuracoes for update to authenticated using (public.eh_admin()) with check (public.eh_admin());
 
 alter table perfis enable row level security;
 create policy "ve_o_proprio_ou_admin" on perfis for select to authenticated using (user_id = auth.uid() or public.eh_admin());

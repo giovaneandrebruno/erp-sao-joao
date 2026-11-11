@@ -123,7 +123,9 @@ end $$;
 create trigger trg_orcamento_padroes before insert on orcamentos for each row execute function orcamento_padroes();
 
 -- ---------------------------------------------------------------- resultado (DRE) do orçamento e do pedido
-drop view orcamentos_resumo;
+-- A versão antiga do resumo fica guardada com outro nome (sem apagar nada).
+alter view orcamentos_resumo rename to orcamentos_resumo_v1;
+revoke all on orcamentos_resumo_v1 from authenticated;
 create view orcamentos_resumo with (security_invoker = true) as
 with base as (
   select o.*,
@@ -147,7 +149,8 @@ select b.*,
          as lucro
 from base b;
 
-drop view pedidos_resumo;
+alter view pedidos_resumo rename to pedidos_resumo_v1;
+revoke all on pedidos_resumo_v1 from authenticated;
 create view pedidos_resumo with (security_invoker = true) as
 with base as (
   select p.*,
