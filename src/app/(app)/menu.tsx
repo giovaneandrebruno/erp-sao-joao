@@ -29,6 +29,7 @@ const GRUPOS = [
   {
     titulo: "Gestão",
     itens: [
+      { href: "/importar", rotulo: "Importar arquivos" },
       { href: "/financeiro", rotulo: "Financeiro" },
       { href: "/analises", rotulo: "Análises" },
       { href: "/relatorios", rotulo: "Relatórios" },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Selo, Tabela, Titulo } from "@/components/ui";
 import { ROTULOS, brl } from "@/lib/format";
@@ -14,7 +15,7 @@ export default async function EstoquePage({ searchParams }: PageProps<"/estoque"
 
   return (
     <>
-      <Titulo acao={<BotaoLink href="/estoque/novo">Novo produto</BotaoLink>}>Estoque e produtos</Titulo>
+      <Titulo acao={<FerramentasImportacao area="estoque" extra={<BotaoLink href="/estoque/novo">Novo produto</BotaoLink>} />}>Estoque e produtos</Titulo>
       <div className="mb-4 flex gap-3 text-sm">
         <Link href="/estoque" className={!baixo ? "font-semibold text-madeira-800" : "text-stone-500"}>Todos</Link>
         <Link href="/estoque?baixo=1" className={baixo ? "font-semibold text-madeira-800" : "text-stone-500"}>Abaixo do mínimo</Link>

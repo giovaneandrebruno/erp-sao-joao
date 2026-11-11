@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Botao, Erro, inputCls } from "@/components/ui";
 import { agruparPorAmbiente, lerPlanilha } from "@/lib/importar";
 import { brl } from "@/lib/format";
+import { lerPlanilhaArquivo, paraTexto } from "@/lib/planilha";
 import { importarItens } from "./actions";
 
 export function ImportarProjeto({ orcamentoId, markup }: { orcamentoId: string; markup: number }) {
@@ -20,6 +21,17 @@ export function ImportarProjeto({ orcamentoId, markup }: { orcamentoId: string; 
 
   async function lerArquivo(f: File | undefined) {
     if (!f) return;
+    setErro(null);
+    if (/\.(xlsx|xlsm|xls)$/i.test(f.name)) {
+      try {
+        const abas = await lerPlanilhaArquivo(f);
+        const maior = abas.reduce((m, a) => (a.linhas.length > m.linhas.length ? a : m), abas[0]);
+        setTexto(paraTexto(maior.linhas));
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : "Não consegui ler a planilha.");
+      }
+      return;
+    }
     const buf = await f.arrayBuffer();
     let t = new TextDecoder("utf-8").decode(buf);
     if (t.includes("�")) t = new TextDecoder("windows-1252").decode(buf);
@@ -35,14 +47,14 @@ export function ImportarProjeto({ orcamentoId, markup }: { orcamentoId: string; 
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold">Importar itens do projeto</h3>
-          <p className="text-sm text-stone-500">Exporte a lista de peças ou o orçamento do programa de projeto em planilha (CSV) e envie o arquivo, ou copie as linhas da planilha e cole abaixo. Colunas reconhecidas: ambiente, descrição, quantidade, custo, venda, largura, altura, profundidade.</p>
+          <p className="text-sm text-stone-500">Exporte a lista de peças ou o orçamento do programa de projeto em planilha (Excel ou CSV) e envie o arquivo, ou copie as linhas da planilha e cole abaixo. Colunas reconhecidas: ambiente, descrição, quantidade, custo, venda, largura, altura, profundidade.</p>
         </div>
         <button type="button" onClick={() => setAberto(false)} className="text-sm text-stone-400 hover:text-stone-700">fechar</button>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <label className="cursor-pointer rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium hover:border-violeta/40">
           Escolher arquivo
-          <input type="file" accept=".csv,.txt,.tsv" className="hidden" onChange={(e) => lerArquivo(e.target.files?.[0])} />
+          <input type="file" accept=".csv,.txt,.tsv,.xlsx,.xlsm" className="hidden" onChange={(e) => lerArquivo(e.target.files?.[0])} />
         </label>
         <label className="flex items-center gap-2 text-sm text-stone-600">
           <input type="checkbox" checked={agrupar} onChange={(e) => setAgrupar(e.target.checked)} className="accent-violeta" />

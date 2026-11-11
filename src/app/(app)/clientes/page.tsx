@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Tabela, Titulo, inputCls } from "@/components/ui";
 
@@ -13,7 +14,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
 
   return (
     <>
-      <Titulo acao={<BotaoLink href="/clientes/novo">Novo cliente</BotaoLink>}>Clientes</Titulo>
+      <Titulo acao={<FerramentasImportacao area="clientes" extra={<BotaoLink href="/clientes/novo">Novo cliente</BotaoLink>} />}>Clientes</Titulo>
       <form className="mb-4">
         <input name="busca" defaultValue={termo} placeholder="Buscar por nome, telefone ou CPF/CNPJ" className={`${inputCls} w-full max-w-md`} />
       </form>
