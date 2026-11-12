@@ -38,7 +38,7 @@ export default async function CampoPage({ searchParams }: PageProps<"/campo">) {
             <option value="">Todos os montadores</option>
             {montadores?.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
-          <button className="rounded-full bg-gradient-to-r from-violeta to-ciano px-4 text-sm font-semibold text-white">Ver</button>
+          <button className="rounded-full bg-marinho px-4 text-sm font-semibold text-white">Ver</button>
         </form>
       )}
 
@@ -59,7 +59,7 @@ function Grupo({ titulo, itens, alerta, mostrarResp }: { titulo: string; itens: 
         {itens.map((s) => (
           <li key={s.chave}>
             <Link href={`/campo/${s.tipo}/${s.id}`} className="vidro flex items-center gap-4 rounded-2xl p-4 transition hover:border-violeta/40">
-              <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl text-white ${alerta ? "bg-rosa" : "bg-gradient-to-br from-violeta to-ciano"}`}>
+              <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl text-white ${alerta ? "bg-rosa" : "bg-marinho"}`}>
                 <span className="text-lg font-semibold leading-none">{s.data ? s.data.slice(8, 10) : "—"}</span>
                 <span className="text-[10px] uppercase">{s.data ? data(s.data).slice(3, 5) : ""}</span>
               </div>

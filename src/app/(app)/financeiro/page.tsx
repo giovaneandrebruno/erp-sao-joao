@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
 import { ROTULOS, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
 import { criarLancamento, excluirLancamento, marcarPago } from "./actions";
+import { JanelaBotao } from "@/components/janela";
+
+const SEGMENTOS = "inline-flex rounded-lg border border-stone-200 bg-white p-0.5 shadow-[0_1px_2px_rgb(15_29_51/0.04)]";
+const SEG = "rounded-md px-3 py-1 text-stone-500 transition hover:text-stone-900";
+const SEG_ATIVO = "rounded-md bg-marinho px-3 py-1 font-medium text-white";
 
 function mesAtual() {
   return hojeISO().slice(0, 7);
@@ -53,6 +58,50 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
   const mesAnterior = new Date(Date.UTC(ano, m - 2, 1)).toISOString().slice(0, 7);
   const mesSeguinte = new Date(Date.UTC(ano, m, 1)).toISOString().slice(0, 7);
 
+  const novoLancamento = (
+    <JanelaBotao rotulo="Novo lançamento" titulo="Novo lançamento" descricao="Conta a pagar ou a receber." largura="xl" abrirAoCarregar={sp.novo === "1"}>
+      <form action={criarLancamento} className="grid gap-3 md:grid-cols-12">
+        <Campo rotulo="Tipo" className="md:col-span-2">
+          <select name="tipo" className={inputCls}><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
+        </Campo>
+        <Campo rotulo="Descrição *" className="md:col-span-4">
+          <input name="descricao" required placeholder="Compra de chapas, aluguel, energia..." className={inputCls} />
+        </Campo>
+        <Campo rotulo="Categoria" className="md:col-span-2">
+          <input name="categoria" list="categorias" className={inputCls} />
+          <datalist id="categorias">
+            {["Matéria-prima", "Ferragens", "Salários", "Aluguel", "Energia", "Impostos", "Frete", "Manutenção", "Venda", "Outros"].map((c) => <option key={c} value={c} />)}
+          </datalist>
+        </Campo>
+        <Campo rotulo="Valor (R$) *" className="md:col-span-2">
+          <input name="valor" required inputMode="decimal" className={inputCls} />
+        </Campo>
+        <Campo rotulo="Vencimento *" className="md:col-span-2">
+          <input name="vencimento" type="date" required defaultValue={hoje} className={inputCls} />
+        </Campo>
+        <Campo rotulo="Unidade" className="md:col-span-2">
+          <select name="unidade" className={inputCls}><option value="marcenaria">Marcenaria</option><option value="loja">Loja</option></select>
+        </Campo>
+        <Campo rotulo="Fornecedor" className="md:col-span-3">
+          <select name="fornecedor_id" defaultValue="" className={inputCls}>
+            <option value="">—</option>
+            {fornecedores?.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Cliente" className="md:col-span-3">
+          <select name="cliente_id" defaultValue="" className={inputCls}>
+            <option value="">—</option>
+            {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Forma de pagamento" className="md:col-span-2">
+          <input name="forma_pagamento" className={inputCls} />
+        </Campo>
+        <div className="flex items-end md:col-span-2"><Botao type="submit">Lançar</Botao></div>
+      </form>
+    </JanelaBotao>
+  );
+
   return (
     <>
       <Titulo>Financeiro</Titulo>
@@ -65,16 +114,17 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
             <Link href={link({ mes: mesSeguinte })} className="px-2 text-madeira-800">→</Link>
           </span>
         )}
-        <span className="flex gap-3">
+        <span className={SEGMENTOS}>
           {[[null, "Tudo"], ["receber", "A receber"], ["pagar", "A pagar"]].map(([k, r]) => (
-            <Link key={r} href={link({ tipo: k })} className={tipo === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
+            <Link key={r} href={link({ tipo: k })} className={tipo === k ? SEG_ATIVO : SEG}>{r}</Link>
           ))}
         </span>
-        <span className="flex gap-3">
+        <span className={SEGMENTOS}>
           {[[null, "Todos"], ["abertos", "Em aberto"], ["pagos", "Pagos"], ["vencidos", "Vencidos"]].map(([k, r]) => (
-            <Link key={r} href={link({ situacao: k })} className={situacao === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
+            <Link key={r} href={link({ situacao: k })} className={situacao === k ? SEG_ATIVO : SEG}>{r}</Link>
           ))}
         </span>
+        <span className="ml-auto">{novoLancamento}</span>
       </div>
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
@@ -119,48 +169,6 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
         </Tabela>
       </div>
 
-      <Cartao>
-        <h2 className="mb-3 font-semibold">Novo lançamento</h2>
-        <form action={criarLancamento} className="grid gap-3 md:grid-cols-12">
-          <Campo rotulo="Tipo" className="md:col-span-2">
-            <select name="tipo" className={inputCls}><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
-          </Campo>
-          <Campo rotulo="Descrição *" className="md:col-span-4">
-            <input name="descricao" required placeholder="Compra de chapas, aluguel, energia..." className={inputCls} />
-          </Campo>
-          <Campo rotulo="Categoria" className="md:col-span-2">
-            <input name="categoria" list="categorias" className={inputCls} />
-            <datalist id="categorias">
-              {["Matéria-prima", "Ferragens", "Salários", "Aluguel", "Energia", "Impostos", "Frete", "Manutenção", "Venda", "Outros"].map((c) => <option key={c} value={c} />)}
-            </datalist>
-          </Campo>
-          <Campo rotulo="Valor (R$) *" className="md:col-span-2">
-            <input name="valor" required inputMode="decimal" className={inputCls} />
-          </Campo>
-          <Campo rotulo="Vencimento *" className="md:col-span-2">
-            <input name="vencimento" type="date" required defaultValue={hoje} className={inputCls} />
-          </Campo>
-          <Campo rotulo="Unidade" className="md:col-span-2">
-            <select name="unidade" className={inputCls}><option value="marcenaria">Marcenaria</option><option value="loja">Loja</option></select>
-          </Campo>
-          <Campo rotulo="Fornecedor" className="md:col-span-3">
-            <select name="fornecedor_id" defaultValue="" className={inputCls}>
-              <option value="">—</option>
-              {fornecedores?.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
-            </select>
-          </Campo>
-          <Campo rotulo="Cliente" className="md:col-span-3">
-            <select name="cliente_id" defaultValue="" className={inputCls}>
-              <option value="">—</option>
-              {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </Campo>
-          <Campo rotulo="Forma de pagamento" className="md:col-span-2">
-            <input name="forma_pagamento" className={inputCls} />
-          </Campo>
-          <div className="flex items-end md:col-span-2"><Botao type="submit">Lançar</Botao></div>
-        </form>
-      </Cartao>
     </>
   );
 }

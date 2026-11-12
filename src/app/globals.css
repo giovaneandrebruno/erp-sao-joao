@@ -1,45 +1,56 @@
 @import "tailwindcss";
 
 /*
- * Identidade "Emob Pro": fundo cinza claro, menu lateral em índigo profundo
- * e destaques vibrantes em gradiente violeta → ciano.
+ * Identidade "Emob Pro" (v4): menu lateral azul-marinho, fundo cinza-azulado
+ * bem claro, cartões brancos com borda fina e destaques em azul-marinho.
+ * Os nomes antigos dos tokens (violeta, ciano, madeira...) foram mantidos
+ * para não mexer em todas as telas: só o valor de cada um mudou.
  * A classe .lateral reaplica a escala escura dentro do menu lateral;
  * a classe .papel garante papel branco nos documentos impressos.
  */
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  --color-fundo: #eceef3;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
+
+  --color-fundo: #f3f5f9;
   --color-superficie: #ffffff;
-  --color-grafite: #14142b;
-  --color-violeta: #6c47ff;
-  --color-ciano: #00b2d6;
-  --color-neon: #00a862;
-  --color-rosa: #f0306a;
-  --color-indigo-lateral: #16123a;
+  --color-grafite: #0f1d33;
+  --color-marinho: #13294b;
+  --color-marinho-claro: #1c3a66;
+  --color-azul: #2563d8;
 
-  --color-stone-50: #f7f8fa;
-  --color-stone-100: #f1f2f6;
-  --color-stone-200: #e3e5ec;
-  --color-stone-300: #cfd2dc;
-  --color-stone-400: #9a9eb0;
-  --color-stone-500: #6b7086;
-  --color-stone-600: #50546a;
-  --color-stone-700: #3a3d52;
-  --color-stone-800: #25283b;
-  --color-stone-900: #14142b;
+  /* destaque principal (antes violeta) e secundário (antes ciano) */
+  --color-violeta: #1f5fd1;
+  --color-ciano: #4c8df0;
+  --color-neon: #12935a;
+  --color-rosa: #d9452b;
+  --color-indigo-lateral: #0e1b30;
 
-  --color-madeira-50: #f3f0ff;
-  --color-madeira-100: #e7e0ff;
-  --color-madeira-200: #cfc2ff;
-  --color-madeira-300: #ab95ff;
-  --color-madeira-400: #8a6cff;
-  --color-madeira-500: #6c47ff;
-  --color-madeira-600: #5b37ee;
-  --color-madeira-700: #5530e0;
-  --color-madeira-800: #4524b8;
-  --color-madeira-900: #321a85;
+  --color-stone-50: #f7f9fc;
+  --color-stone-100: #eef2f7;
+  --color-stone-200: #e1e7ef;
+  --color-stone-300: #cbd3df;
+  --color-stone-400: #94a0b4;
+  --color-stone-500: #66748c;
+  --color-stone-600: #4b5871;
+  --color-stone-700: #344158;
+  --color-stone-800: #1f2b42;
+  --color-stone-900: #0f1d33;
+
+  --color-madeira-50: #eef4ff;
+  --color-madeira-100: #dce8fe;
+  --color-madeira-200: #bcd3fc;
+  --color-madeira-300: #8fb4f7;
+  --color-madeira-400: #5e8fef;
+  --color-madeira-500: #3a72e3;
+  --color-madeira-600: #2860d2;
+  --color-madeira-700: #1f4fb4;
+  --color-madeira-800: #1d4593;
+  --color-madeira-900: #13294b;
 }
 
 html {
@@ -49,55 +60,104 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--color-fundo);
-  background-image:
-    radial-gradient(50rem 26rem at 100% -10%, rgb(108 71 255 / 0.10), transparent 60%),
-    radial-gradient(40rem 22rem at 30% -15%, rgb(0 178 214 / 0.08), transparent 60%);
-  background-attachment: fixed;
-  font-feature-settings: "ss01", "cv11";
+}
+
+/* números alinhados nas tabelas e indicadores */
+.font-mono,
+td {
+  font-variant-numeric: tabular-nums;
 }
 
 @layer components {
+  /* Antes era um gradiente; agora é o azul-marinho da marca. */
   .texto-gradiente {
-    background: linear-gradient(90deg, var(--color-violeta), var(--color-ciano));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--color-marinho);
   }
 
   .vidro {
-    background: rgb(255 255 255 / 0.85);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgb(20 20 43 / 0.06);
-    box-shadow: 0 1px 2px rgb(20 20 43 / 0.04), 0 8px 24px -12px rgb(20 20 43 / 0.10);
+    background: var(--color-superficie);
+    border: 1px solid rgb(15 29 51 / 0.08);
+    box-shadow: 0 1px 2px rgb(15 29 51 / 0.04);
   }
 
   .borda-gradiente {
-    border: 1px solid transparent;
-    background:
-      linear-gradient(var(--color-superficie), var(--color-superficie)) padding-box,
-      linear-gradient(120deg, rgb(108 71 255 / 0.8), rgb(0 178 214 / 0.6)) border-box;
-    box-shadow: 0 18px 40px -20px rgb(108 71 255 / 0.45);
+    background: var(--color-superficie);
+    border: 1px solid rgb(15 29 51 / 0.08);
+    box-shadow: 0 1px 2px rgb(15 29 51 / 0.04), 0 12px 32px -20px rgb(19 41 75 / 0.35);
   }
 
-  /* Menu lateral escuro com as cores neon originais */
+  /* Menu lateral azul-marinho */
   .lateral {
     color-scheme: dark;
-    background:
-      radial-gradient(28rem 20rem at 0% 0%, rgb(124 92 255 / 0.35), transparent 70%),
-      radial-gradient(24rem 18rem at 100% 100%, rgb(0 229 255 / 0.18), transparent 70%),
-      var(--color-indigo-lateral);
-    --color-ciano: #00e5ff;
-    --color-stone-300: #3a3566;
-    --color-stone-400: #6f6a9e;
-    --color-stone-500: #a39fcc;
-    --color-stone-800: #ecebff;
+    background: var(--color-indigo-lateral);
+    --color-ciano: #6ea6ff;
+    --color-stone-300: #2a3a55;
+    --color-stone-400: #6c7c98;
+    --color-stone-500: #a3b0c6;
+    --color-stone-800: #e6ecf5;
     --color-stone-900: #ffffff;
   }
+
+  /* Janelas sobrepostas: fundo escurecido em volta */
+  .janela::backdrop {
+    background: rgb(8 16 30 / 0.55);
+    backdrop-filter: blur(2px);
+  }
+  .janela[open] {
+    animation: janela-entra 0.16s ease-out;
+  }
+  .janela-fundo {
+    background: rgb(8 16 30 / 0.55);
+    backdrop-filter: blur(2px);
+    animation: fundo-entra 0.16s ease-out;
+  }
+  .janela-caixa {
+    animation: janela-entra 0.16s ease-out;
+  }
+
+  /* Uma tela inteira aberta dentro da janela: título menor e sem cartão em volta */
+  .dentro-janela h1 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  .dentro-janela > .mb-8:first-child {
+    margin-bottom: 1.25rem;
+  }
+  .dentro-janela .vidro {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+@keyframes janela-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fundo-entra {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+body:has(.janela[open]),
+body:has(.janela-fundo) {
+  overflow: hidden;
 }
 
 /* Documentos para o cliente: papel branco */
 .papel {
-  color: #14142b;
+  color: #0f1d33;
   --color-superficie: #ffffff;
 }
 
