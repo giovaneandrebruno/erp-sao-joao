@@ -198,15 +198,49 @@ export async function limparArea(area: Area, senha: string): Promise<{ erro: str
   if (semPermissao) return { erro: semPermissao };
   if (!senha) return { erro: "Digite a sua senha." };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("limpar_importacoes", { p_area: area, p_senha: senha });
-  if (error) return { erro: error.message.includes("Senha incorreta") ? "Senha incorreta." : error.message };
-  const r = data as { removidos: number; mantidos: number; arquivos: string[] };
-  if (r.arquivos?.length) {
-    for (const lote of emLotes(r.arquivos, 100)) await supabase.storage.from("importacoes").remove(lote);
+  const { data: ok, error: eSenha } = await supabase.rpc("conferir_minha_senha", { p_senha: senha });
+  if (eSenha) return { erro: eSenha.message };
+  if (!ok) return { erro: "Senha incorreta." };
+
+  const def = AREAS[area];
+  try {
+    const { data: imps } = await supabase.from("importacoes").select("arquivo_caminho").eq("area", area);
+    const arquivos = (imps ?? []).map((i) => i.arquivo_caminho).filter((c): c is string => Boolean(c));
+
+    const ids = (await buscarTodos<{ id: string }>(supabase, def.tabela, "id", true)).map((r) => r.id);
+    let apagar = ids;
+    let mantidos = 0;
+    if (area === "clientes" && ids.length) {
+      // cliente que já tem orçamento, pedido, negociação ou chamado fica, para não perder esse histórico
+      const presos = new Set<string>();
+      for (const lote of emLotes(ids, 200)) {
+        for (const t of ["orcamentos", "pedidos", "negociacoes", "chamados"]) {
+          const { data } = await supabase.from(t).select("cliente_id").in("cliente_id", lote);
+          for (const x of (data ?? []) as { cliente_id: string }[]) presos.add(x.cliente_id);
+        }
+      }
+      apagar = ids.filter((id) => !presos.has(id));
+      mantidos = presos.size;
+      for (const lote of emLotes([...presos], 200)) {
+        await supabase.from("clientes").update({ importacao_id: null, chave_importacao: null }).in("id", lote);
+      }
+    }
+    let removidos = 0;
+    for (const lote of emLotes(apagar, 200)) {
+      const { error, count } = await supabase.from(def.tabela).delete({ count: "exact" }).in("id", lote);
+      if (error) throw new Error(error.message);
+      removidos += count ?? 0;
+    }
+    const { error: eImp } = await supabase.from("importacoes").delete().eq("area", area);
+    if (eImp) throw new Error(eImp.message);
+    for (const lote of emLotes(arquivos, 100)) await supabase.storage.from("importacoes").remove(lote);
+
+    revalidatePath(def.caminho);
+    revalidatePath("/importar");
+    return { removidos, mantidos };
+  } catch (e) {
+    return { erro: e instanceof Error ? e.message : "Erro ao limpar." };
   }
-  revalidatePath(AREAS[area].caminho);
-  revalidatePath("/importar");
-  return { removidos: r.removidos, mantidos: r.mantidos };
 }
 
 /** Link temporário para baixar o arquivo original. */

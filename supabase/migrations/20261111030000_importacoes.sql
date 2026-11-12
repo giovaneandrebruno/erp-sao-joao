@@ -54,55 +54,16 @@ create policy "importacoes_ver" on storage.objects for select to authenticated
 create policy "importacoes_apagar" on storage.objects for delete to authenticated
   using (bucket_id = 'importacoes' and public.eh_escritorio());
 
--- ---------------------------------------------------------------- limpar o que veio de arquivos (pede a senha)
-create function public.limpar_importacoes(p_area text, p_senha text) returns jsonb
+-- ---------------------------------------------------------------- confirmar a senha antes de limpar o que veio de arquivos
+create function public.conferir_minha_senha(p_senha text) returns boolean
 language plpgsql security definer set search_path = public, extensions as $$
-declare
-  v_ok boolean;
-  v_removidos integer := 0;
-  v_mantidos integer := 0;
-  v_arquivos text[];
+declare v_ok boolean;
 begin
-  if auth.uid() is null or not public.eh_escritorio() then raise exception 'Sem permissão.'; end if;
-  if p_area = 'financeiro' and not public.eh_admin() then raise exception 'Só o administrador limpa o financeiro.'; end if;
-  if p_area not in ('producao', 'clientes', 'fornecedores', 'estoque', 'financeiro') then raise exception 'Área inválida.'; end if;
-
+  if auth.uid() is null then return false; end if;
   select u.encrypted_password = extensions.crypt(coalesce(p_senha, ''), u.encrypted_password)
     into v_ok from auth.users u where u.id = auth.uid();
-  if not coalesce(v_ok, false) then
-    perform pg_sleep(1);
-    raise exception 'Senha incorreta.';
-  end if;
-
-  select coalesce(array_agg(arquivo_caminho) filter (where arquivo_caminho is not null), '{}')
-    into v_arquivos from importacoes where area = p_area;
-
-  if p_area = 'producao' then
-    delete from ordens_producao where importacao_id is not null;
-    get diagnostics v_removidos = row_count;
-  elsif p_area = 'fornecedores' then
-    delete from fornecedores where importacao_id is not null;
-    get diagnostics v_removidos = row_count;
-  elsif p_area = 'estoque' then
-    delete from produtos where importacao_id is not null;
-    get diagnostics v_removidos = row_count;
-  elsif p_area = 'financeiro' then
-    delete from lancamentos where importacao_id is not null;
-    get diagnostics v_removidos = row_count;
-  elsif p_area = 'clientes' then
-    -- cliente que já tem orçamento, pedido, negociação ou chamado fica, para não perder esse histórico
-    delete from clientes c where c.importacao_id is not null
-      and not exists (select 1 from orcamentos o where o.cliente_id = c.id)
-      and not exists (select 1 from pedidos p where p.cliente_id = c.id)
-      and not exists (select 1 from negociacoes n where n.cliente_id = c.id)
-      and not exists (select 1 from chamados ch where ch.cliente_id = c.id);
-    get diagnostics v_removidos = row_count;
-    update clientes set importacao_id = null, chave_importacao = null where importacao_id is not null;
-    get diagnostics v_mantidos = row_count;
-  end if;
-
-  delete from importacoes where area = p_area;
-  return jsonb_build_object('removidos', v_removidos, 'mantidos', v_mantidos, 'arquivos', to_jsonb(v_arquivos));
+  if not coalesce(v_ok, false) then perform pg_sleep(1); end if;
+  return coalesce(v_ok, false);
 end $$;
-revoke execute on function public.limpar_importacoes(text, text) from public, anon;
-grant execute on function public.limpar_importacoes(text, text) to authenticated;
+revoke execute on function public.conferir_minha_senha(text) from public, anon;
+grant execute on function public.conferir_minha_senha(text) to authenticated;
