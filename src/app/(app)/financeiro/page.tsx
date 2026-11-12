@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import Link from "next/link";
+import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
 import { ROTULOS, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
@@ -55,7 +56,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
 
   return (
     <>
-      <Titulo>Financeiro</Titulo>
+      <Titulo acao={<FerramentasImportacao area="financeiro" />}>Financeiro</Titulo>
 
       <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
         {situacao !== "vencidos" && (

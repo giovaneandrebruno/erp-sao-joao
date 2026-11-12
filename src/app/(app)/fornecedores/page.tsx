@@ -1,3 +1,4 @@
+import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Tabela, Titulo, inputCls } from "@/components/ui";
 import { salvarFornecedor } from "./actions";
@@ -8,7 +9,7 @@ export default async function FornecedoresPage() {
 
   return (
     <>
-      <Titulo>Fornecedores</Titulo>
+      <Titulo acao={<FerramentasImportacao area="fornecedores" />}>Fornecedores</Titulo>
       <div className="mb-8">
         <Tabela cabecalho={["Nome", "Contato", "Telefone", "E-mail", "CNPJ"]} vazio={!fornecedores?.length}>
           {fornecedores?.map((f) => (
