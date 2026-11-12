@@ -7,7 +7,16 @@
 export type Area = "producao" | "clientes" | "fornecedores" | "estoque" | "financeiro";
 export type TipoCampo = "texto" | "numero" | "data" | "etapa" | "tipo_produto" | "tipo_lancamento" | "situacao" | "unidade" | "inteiro";
 
-export type CampoArea = { chave: string; rotulo: string; tipo: TipoCampo; obrigatorio?: boolean; reconhece: RegExp };
+export type CampoArea = {
+  chave: string;
+  rotulo: string;
+  tipo: TipoCampo;
+  obrigatorio?: boolean;
+  /** nome de coluna que pode ser deste campo */
+  reconhece: RegExp;
+  /** entre várias colunas possíveis, a que tiver este nome ganha */
+  prefere?: RegExp;
+};
 
 export type DefinicaoArea = {
   area: Area;
@@ -26,14 +35,14 @@ export const AREAS: Record<Area, DefinicaoArea> = {
     caminho: "/producao",
     explicacao: "Planilha de planejamento da produção: cada linha vira uma ordem de produção no quadro.",
     campos: [
-      { chave: "codigo", rotulo: "Código / Nº da OP", tipo: "texto", reconhece: /^(c[oó]d|n[ºo°]?\s*(da\s*)?op\b|^op$|^id$|ordem)/i },
-      { chave: "pedido", rotulo: "Nº do pedido", tipo: "inteiro", reconhece: /pedido|contrato|^ped\b|^os\b/i },
-      { chave: "cliente_nome", rotulo: "Cliente", tipo: "texto", reconhece: /cliente|obra|nome/i },
-      { chave: "ambiente", rotulo: "Ambiente", tipo: "texto", reconhece: /ambiente|c[oô]modo|local/i },
-      { chave: "descricao", rotulo: "Descrição / Móvel", tipo: "texto", obrigatorio: true, reconhece: /descri|m[oó]vel|item|pe[cç]a|m[oó]dulo|produto|servi[cç]o|projeto/i },
-      { chave: "etapa", rotulo: "Etapa / Status", tipo: "etapa", reconhece: /etapa|status|situa|fase|andamento/i },
-      { chave: "responsavel", rotulo: "Responsável", tipo: "texto", reconhece: /respons|marceneiro|montador|equipe|operador|setor/i },
-      { chave: "prazo", rotulo: "Prazo / Entrega", tipo: "data", reconhece: /prazo|entrega|data\s*(prev|fim|final)|previs|t[eé]rmino|conclus/i },
+      { chave: "codigo", rotulo: "Código / Nº da OS ou OP", tipo: "texto", reconhece: /^(c[oó]d|n[ºo°]?\s*(da\s*)?o[ps]\b|o[ps]$|id$|ordem)/i },
+      { chave: "pedido", rotulo: "Nº do pedido", tipo: "inteiro", reconhece: /pedido|contrato|^ped\b/i },
+      { chave: "cliente_nome", rotulo: "Cliente", tipo: "texto", reconhece: /cliente|obra|^nome/i, prefere: /^cliente$/i },
+      { chave: "ambiente", rotulo: "Ambiente", tipo: "texto", reconhece: /^(?!.*(n[uú]mero|qtd|quant|total)).*(ambiente|c[oô]modo|local)/i },
+      { chave: "descricao", rotulo: "Descrição / Móvel", tipo: "texto", reconhece: /^(?!.*memorial)(descri|m[oó]vel|item|pe[cç]a|m[oó]dulo|produto|servi[cç]o$|projeto$)/i },
+      { chave: "etapa", rotulo: "Etapa / Status", tipo: "etapa", reconhece: /etapa|status|situa|fase|andamento/i, prefere: /^(status|etapa)$/i },
+      { chave: "responsavel", rotulo: "Responsável", tipo: "texto", reconhece: /respons|marceneiro|montador|equipe|operador|setor/i, prefere: /^respons[aá]vel$|marceneiro/i },
+      { chave: "prazo", rotulo: "Prazo / Entrega", tipo: "data", reconhece: /prazo|entrega|data\s*(prev|fim|final)|previs|t[eé]rmino|conclus|limite/i, prefere: /limite\s*(de\s*)?fabrica|prazo\s*limite\s*entrega|data\s*(de\s*)?entrega/i },
       { chave: "observacoes", rotulo: "Observações", tipo: "texto", reconhece: /obs|nota|coment/i },
     ],
   },
@@ -167,12 +176,12 @@ export function etapaDe(v: string): Etapa | null {
   const s = normalizar(v);
   if (!s) return null;
   if (/conclu|finaliz|entregue|encerr|^ok$|^feito|^100 ?%/.test(s)) return "concluido";
-  if (/instal|entrega|montagem (no|na|em) (cliente|obra)|na obra/.test(s)) return "instalacao";
+  if (/instal|entrega|montagem (no|na|em) (cliente|obra)|na obra|che(c)?k ?-?list|itens pendentes/.test(s)) return "instalacao";
   if (/pronto|embal|expedi|aguardando entrega/.test(s)) return "pronto";
   if (/acab|pintura|laca|verniz|revis/.test(s)) return "acabamento";
   if (/fita|borda|bordo/.test(s)) return "fita_borda";
   if (/corte|cortad|usinag|fura[cç]|cnc|seccion/.test(s)) return "corte";
-  if (/mont/.test(s)) return "montagem";
+  if (/mont|fabrica/.test(s)) return "montagem";
   if (/aguard|pendente|nao inici|a fazer|fila|programad|planejad|novo/.test(s)) return "aguardando";
   return null;
 }
@@ -201,27 +210,61 @@ function situacaoPaga(v: string) {
 
 // ---------------------------------------------------------------- reconhecimento de colunas
 
-/** Sugere o campo de cada coluna pelo nome do cabeçalho. Cada campo vai para uma coluna só. */
-export function mapearColunas(area: Area, cabecalho: string[]): (string | null)[] {
+/**
+ * Sugere o campo de cada coluna pelo nome do cabeçalho. Cada campo vai para uma coluna só.
+ * Quando várias colunas servem, ganha a de nome preferido e, nos campos de data e número,
+ * a que tem mais valores daquele tipo nas primeiras linhas.
+ */
+export function mapearColunas(area: Area, cabecalho: string[], amostra: string[][] = []): (string | null)[] {
   const campos = AREAS[area].campos;
   const mapa: (string | null)[] = cabecalho.map(() => null);
-  const usados = new Set<string>();
-  // primeiro os campos na ordem da definição (mais específicos antes), depois as colunas
+  const encaixe = (i: number, tipo: TipoCampo) => {
+    const valores = amostra.map((l) => (l[i] ?? "").trim()).filter((v) => v && !VAZIOS.test(v));
+    if (!valores.length) return 0;
+    const ok = valores.filter((v) => (tipo === "data" ? dataISO(v) : tipo === "numero" || tipo === "inteiro" ? numeroBR(v) !== null : true)).length;
+    return ok / valores.length;
+  };
   for (const campo of campos) {
-    const i = cabecalho.findIndex((c, idx) => mapa[idx] === null && c && campo.reconhece.test(normalizarCab(c)));
-    if (i >= 0 && !usados.has(campo.chave)) { mapa[i] = campo.chave; usados.add(campo.chave); }
+    let melhor = -1;
+    let nota = -Infinity;
+    cabecalho.forEach((c, i) => {
+      const nome = normalizarCab(c ?? "");
+      if (mapa[i] !== null || !nome || !campo.reconhece.test(nome)) return;
+      let n = 0;
+      if (campo.prefere?.test(nome)) n += 5;
+      if (campo.tipo === "data" || campo.tipo === "numero" || campo.tipo === "inteiro") n += encaixe(i, campo.tipo) * 4;
+      n -= nome.length / 100 + i / 1000;
+      if (n > nota) { nota = n; melhor = i; }
+    });
+    if (melhor >= 0) mapa[melhor] = campo.chave;
   }
   return mapa;
 }
 
+/** Valores que significam "nada aqui" em planilhas de controle. */
+const VAZIOS = /^(-+|\?+|ok|x|n\/?a|s\/?n|\.)$/i;
+
+/**
+ * Legenda de siglas que muitas planilhas trazem acima da tabela (ex.: "CO | CORTE E USINAGEM").
+ * Serve para entender colunas de status escritas só com a sigla.
+ */
+export function acharLegenda(tabela: string[][], linhaCab: number): Record<string, string> {
+  const legenda: Record<string, string> = {};
+  for (const l of tabela.slice(0, linhaCab)) {
+    const [sigla, nome] = [(l[0] ?? "").trim(), (l[1] ?? "").trim()];
+    if (/^[A-Za-zÀ-ú]{1,6}$/.test(sigla) && nome.length > sigla.length && /[a-zà-ú]{3}/i.test(nome)) legenda[sigla.toUpperCase()] = nome;
+  }
+  return legenda;
+}
+
 const normalizarCab = (c: string) => c.replace(/[_\-]+/g, " ").trim();
 
-/** Acha a linha de cabeçalho nas primeiras linhas (planilhas de PCP costumam ter título em cima). */
-export function acharCabecalho(area: Area, tabela: string[][]): number {
+/** Acha a linha de cabeçalho nas primeiras linhas (planilhas de PCP costumam ter título e legenda em cima). */
+export function avaliarAba(area: Area, tabela: string[][]): { linha: number; nota: number } {
   let melhor = 0;
   let melhorNota = -1;
   const campos = AREAS[area].campos;
-  for (let i = 0; i < Math.min(tabela.length, 25); i++) {
+  for (let i = 0; i < Math.min(tabela.length, 30); i++) {
     const cel = tabela[i].map((c) => (c ?? "").trim()).filter(Boolean);
     if (cel.length < 2) continue;
     const textos = cel.filter((c) => numeroBR(c) === null && !dataISO(c));
@@ -229,12 +272,14 @@ export function acharCabecalho(area: Area, tabela: string[][]): number {
     const nota = batidas * 3 + textos.length - (cel.length - textos.length) * 2;
     if (nota > melhorNota) { melhorNota = nota; melhor = i; }
   }
-  return melhor;
+  return { linha: melhor, nota: melhorNota };
 }
+
+export const acharCabecalho = (area: Area, tabela: string[][]) => avaliarAba(area, tabela).linha;
 
 // ---------------------------------------------------------------- conversão das linhas
 
-export type Opcoes = { tipoPadrao?: "pagar" | "receber" };
+export type Opcoes = { tipoPadrao?: "pagar" | "receber"; legenda?: Record<string, string> };
 
 export type Registro = {
   chave: string;
@@ -265,7 +310,12 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
       if (!v) return;
       const campo = mapa[i];
       if (campo) bruto[campo] = bruto[campo] ? `${bruto[campo]} ${v}` : v;
-      else if (cabecalho[i]?.trim()) extras[cabecalho[i].trim().slice(0, 60)] = v.slice(0, 500);
+      else if (cabecalho[i]?.trim()) {
+        const nome = cabecalho[i].trim().slice(0, 60);
+        const pareceData = /data|in[ií]cio|t[eé]rmino|limite|prazo|previs|agend|libera|aprova|envio|realizad|medi[cç]/i.test(nome);
+        const serial = pareceData && /^\d{5}(\.\d+)?$/.test(v) ? dataISO(v) : null;
+        extras[nome] = serial ? serial.split("-").reverse().join("/") : v.slice(0, 500);
+      }
     });
 
     const valores: Record<string, string | number | null> = {};
@@ -274,14 +324,22 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
 
     for (const campo of def.campos) {
       if (!camposMapeados.has(campo.chave)) continue;
-      const v = bruto[campo.chave] ?? "";
+      const cru = bruto[campo.chave] ?? "";
+      const ignoraVazio = campo.tipo === "data" || campo.tipo === "numero" || campo.tipo === "inteiro" || campo.chave === "codigo";
+      const v = ignoraVazio && VAZIOS.test(cru) ? "" : cru;
       let saida: string | number | null = null;
       switch (campo.tipo) {
         case "texto": saida = v ? v.slice(0, 500) : null; break;
         case "numero": saida = numeroBR(v); if (v && saida === null) avisos.push(`Linha ${nLinha}: "${v}" não é um número (${campo.rotulo}).`); break;
         case "inteiro": { const x = numeroBR(v.replace(/[^\d,.\-]/g, "")); saida = x === null ? null : Math.trunc(x); break; }
         case "data": saida = dataISO(v, anoBase); if (v && !saida) avisos.push(`Linha ${nLinha}: não entendi a data "${v}" (${campo.rotulo}).`); break;
-        case "etapa": saida = etapaDe(v) ?? (v ? "aguardando" : null); break;
+        case "etapa": {
+          const nome = opcoes.legenda?.[v.toUpperCase()];
+          saida = (nome && etapaDe(nome)) || etapaDe(v) || (v ? "aguardando" : null);
+          // a etapa do sistema é mais resumida que a da planilha: o status original fica guardado
+          if (v) extras[campo.rotulo.split(" /")[0]] = nome ? `${v} · ${nome}` : v;
+          break;
+        }
         case "tipo_produto": saida = tipoProduto(v); break;
         case "tipo_lancamento": saida = tipoLancamento(v); break;
         case "situacao": { const p = situacaoPaga(v); saida = p === null ? null : p ? "pago" : "aberto"; break; }
@@ -296,7 +354,12 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
     if (area === "producao") {
       ref.pedido = (valores.pedido as number | null) ?? null;
       delete valores.pedido;
+      const codigo = valores.codigo as string | null | undefined;
       delete valores.codigo;
+      if (!valores.descricao) {
+        if (!codigo && !valores.cliente_nome) { ignoradas++; if (ignoradas <= 15) avisos.push(`Linha ${nLinha} ignorada: sem descrição nem cliente.`); continue; }
+        valores.descricao = codigo ? `OS ${codigo}` : "Projeto";
+      }
     }
     if (area === "financeiro") {
       let valor = valores.valor as number;
@@ -325,7 +388,8 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
     // chave que identifica a mesma linha numa planilha editada depois
     const k = (s: unknown) => normalizar(String(s ?? ""));
     let base: string;
-    if (area === "producao") base = bruto.codigo ? `cod:${k(bruto.codigo)}` : [ref.pedido ?? "", k(valores.cliente_nome), k(valores.ambiente), k(valores.descricao)].join("|");
+    const codigoBruto = bruto.codigo && !VAZIOS.test(bruto.codigo) ? bruto.codigo : "";
+    if (area === "producao") base = codigoBruto ? `cod:${k(codigoBruto)}` : [ref.pedido ?? "", k(valores.cliente_nome), k(valores.ambiente), k(valores.descricao)].join("|");
     else if (area === "clientes" || area === "fornecedores") {
       const doc = String(valores.cpf_cnpj ?? "").replace(/\D/g, "");
       base = doc.length >= 11 ? `doc:${doc}` : `nome:${k(valores.nome)}`;

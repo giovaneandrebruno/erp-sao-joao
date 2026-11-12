@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useTransition, type ReactNode } from "react"
 import { useRouter } from "next/navigation";
 import { Botao, Erro, inputCls } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import { AREAS, acharCabecalho, converter, mapearColunas, type Area } from "@/lib/importacao";
+import { AREAS, acharCabecalho, acharLegenda, avaliarAba, converter, mapearColunas, normalizar, type Area } from "@/lib/importacao";
 import { EXT_IA, EXT_PLANILHA, lerPlanilhaArquivo, type Aba } from "@/lib/planilha";
 import { guardarArquivo, importarDados, limparArea, type Resumo } from "@/app/(app)/importar/actions";
 
@@ -51,6 +51,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
   const [tipoPadrao, setTipoPadrao] = useState<"pagar" | "receber">("pagar");
   const [erro, setErro] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
+  const [juntar, setJuntar] = useState(true);
   const [pendente, iniciar] = useTransition();
   const entrada = useRef<HTMLInputElement>(null);
 
@@ -70,7 +71,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
   function prepararMapa(abas: Aba[], aba: number, linhaCab?: number, observacao?: string) {
     const linhas = abas[aba]?.linhas ?? [];
     const cab = linhaCab ?? acharCabecalho(area, linhas);
-    setEtapa({ tipo: "mapear", abas, aba, linhaCab: cab, mapa: mapearColunas(area, linhas[cab] ?? []), observacao });
+    setEtapa({ tipo: "mapear", abas, aba, linhaCab: cab, mapa: mapearColunas(area, linhas[cab] ?? [], linhas.slice(cab + 1, cab + 80)), observacao });
   }
 
   async function receber(f: File | undefined) {
@@ -86,7 +87,9 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
         setEtapa({ tipo: "lendo", texto: "Lendo a planilha…" });
         const abas = (await lerPlanilhaArquivo(f)).filter((a) => a.linhas.length);
         if (!abas.length) throw new Error("A planilha está vazia.");
-        const melhor = abas.reduce((m, a, i) => (a.linhas.length > abas[m].linhas.length ? i : m), 0);
+        // a aba que mais parece com o que esta área espera; no empate, a com mais linhas
+        const notas = abas.map((a) => avaliarAba(area, a.linhas).nota);
+        const melhor = abas.reduce((m, a, i) => (notas[i] > notas[m] || (notas[i] === notas[m] && a.linhas.length > abas[m].linhas.length) ? i : m), 0);
         prepararMapa(abas, melhor);
       } else if (EXT_IA.test(f.name)) {
         if (!caminho) throw new Error("Não consegui enviar o arquivo. Tente de novo.");
@@ -115,14 +118,24 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
   const mapeamento = etapa.tipo === "mapear" ? etapa : null;
   const linhasAba = mapeamento ? mapeamento.abas[mapeamento.aba].linhas : [];
   const cabecalho = mapeamento ? (linhasAba[mapeamento.linhaCab] ?? []).map((c, i) => c || `Coluna ${i + 1}`) : [];
-  const corpo = mapeamento ? linhasAba.slice(mapeamento.linhaCab + 1) : [];
+  // outras abas com as mesmas colunas (ex.: "em andamento" e "concluídos") entram juntas
+  const assinatura = (l: string[] | undefined) => (l ?? []).map((c) => normalizar(c ?? "")).join("|");
+  const abasIguais = mapeamento
+    ? mapeamento.abas
+        .map((a, i) => ({ a, i, linha: a.linhas.slice(0, 30).findIndex((l) => assinatura(l) === assinatura(linhasAba[mapeamento.linhaCab])) }))
+        .filter((x) => x.i !== mapeamento.aba && x.linha >= 0 && assinatura(linhasAba[mapeamento.linhaCab]).length > 3)
+    : [];
+  const corpo = mapeamento
+    ? [...linhasAba.slice(mapeamento.linhaCab + 1), ...(juntar ? abasIguais.flatMap((x) => x.a.linhas.slice(x.linha + 1)) : [])]
+    : [];
+  const legenda = mapeamento ? acharLegenda(linhasAba, mapeamento.linhaCab) : {};
   const largura = Math.max(cabecalho.length, ...corpo.slice(0, 200).map((l) => l.length));
   const colunas = Array.from({ length: largura }, (_, i) => cabecalho[i] ?? `Coluna ${i + 1}`);
-  const opcoes = area === "financeiro" ? { tipoPadrao } : {};
+  const opcoes = area === "financeiro" ? { tipoPadrao } : { legenda };
   const resultado = useMemo(
     () => (mapeamento ? converter(area, colunas, corpo, colunas.map((_, i) => mapeamento.mapa[i] ?? null), opcoes) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mapeamento, area, tipoPadrao],
+    [mapeamento, area, tipoPadrao, juntar],
   );
   const camposUsados = mapeamento ? def.campos.filter((c) => mapeamento.mapa.includes(c.chave)) : [];
   const faltando = def.campos.filter((c) => c.obrigatorio && !mapeamento?.mapa.includes(c.chave));
@@ -165,7 +178,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violeta to-ciano text-white"><IconeUpload /></span>
                 <span className="font-medium text-stone-800">Arraste o arquivo aqui ou clique para escolher</span>
-                <span className="text-xs text-stone-500">Planilhas Excel (.xlsx) e CSV são lidas na hora. PDFs e fotos de documentos são lidos automaticamente. Outros arquivos ficam guardados como referência.</span>
+                <span className="text-xs text-stone-500">Planilhas Excel (.xlsx ou .xls) e CSV são lidas na hora. PDFs e fotos de documentos são lidos automaticamente. Outros arquivos ficam guardados como referência.</span>
               </button>
               <input ref={entrada} type="file" className="hidden" onChange={(e) => { receber(e.target.files?.[0]); e.target.value = ""; }} />
               <div className="mt-3"><Erro mensagem={erro} /></div>
@@ -223,6 +236,12 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
                 </label>
               </div>
 
+              {abasIguais.length > 0 && (
+                <label className="mb-4 flex items-center gap-2 rounded-xl bg-violeta/5 p-3 text-sm text-stone-700 ring-1 ring-violeta/20">
+                  <input type="checkbox" checked={juntar} onChange={(e) => setJuntar(e.target.checked)} className="accent-violeta" />
+                  Juntar com as abas que têm as mesmas colunas: {abasIguais.map((x) => x.a.nome).join(", ")}
+                </label>
+              )}
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-500">1. Confira onde cada coluna vai entrar no sistema</p>
               <div className="mb-5 max-h-64 overflow-auto rounded-xl border border-stone-200">
                 <table className="w-full text-left text-xs">

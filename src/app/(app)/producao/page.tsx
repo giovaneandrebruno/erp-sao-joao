@@ -43,11 +43,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
                       ) : o.cliente_nome ? (
                         <div className="text-xs text-stone-600">{o.cliente_nome}</div>
                       ) : null}
-                      {o.extras && (
-                        <div className="mt-1 text-[11px] leading-snug text-stone-400" title={Object.entries(o.extras as Record<string, string>).map(([k, v]) => `${k}: ${v}`).join("\n")}>
-                          {Object.entries(o.extras as Record<string, string>).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(" · ")}
-                        </div>
-                      )}
+                      {o.extras && <Extras extras={o.extras as Record<string, string>} />}
                       <div className={`mt-1 text-xs ${atrasada ? "font-semibold text-red-600" : "text-stone-500"}`}>
                         Prazo {data(o.prazo)}{o.responsavel ? ` · ${o.responsavel}` : ""}
                       </div>
@@ -64,5 +60,18 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
         })}
       </div>
     </>
+  );
+}
+
+/** Informações extras vindas da planilha: as mais úteis aparecem no cartão, o resto ao passar o mouse. */
+function Extras({ extras }: { extras: Record<string, string> }) {
+  const todas = Object.entries(extras);
+  const peso = ([k]: [string, string]) => (/^etapa$/i.test(k) ? 0 : /posi[cç][aã]o|situa/i.test(k) ? 1 : /pend|obs/i.test(k) ? 2 : 3);
+  const principais = [...todas].sort((a, b) => peso(a) - peso(b)).slice(0, 3);
+  return (
+    <div className="mt-1 text-[11px] leading-snug text-stone-400" title={todas.map(([k, v]) => `${k}: ${v}`).join("\n")}>
+      {principais.map(([k, v]) => `${k}: ${v}`).join(" · ")}
+      {todas.length > 3 && <span className="text-stone-300"> · +{todas.length - 3}</span>}
+    </div>
   );
 }

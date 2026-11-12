@@ -6,13 +6,13 @@ import { unzipSync, strFromU8 } from "fflate";
 
 export type Aba = { nome: string; linhas: string[][] };
 
-export const EXT_PLANILHA = /\.(csv|tsv|txt|xlsx|xlsm)$/i;
+export const EXT_PLANILHA = /\.(csv|tsv|txt|xlsx|xlsm|xls)$/i;
 export const EXT_IA = /\.(pdf|png|jpe?g|webp|gif)$/i;
 
 export async function lerPlanilhaArquivo(arquivo: File): Promise<Aba[]> {
   const buf = new Uint8Array(await arquivo.arrayBuffer());
   if (/\.(xlsx|xlsm)$/i.test(arquivo.name)) return lerXlsx(buf);
-  if (/\.xls$/i.test(arquivo.name)) throw new Error("Planilha no formato antigo (.xls). Abra no Excel e salve como .xlsx, depois envie de novo.");
+  if (/\.xls$/i.test(arquivo.name)) return lerXls(buf);
   let texto = new TextDecoder("utf-8").decode(buf);
   if (texto.includes("�")) texto = new TextDecoder("windows-1252").decode(buf);
   return [{ nome: arquivo.name, linhas: lerTexto(texto) }];
@@ -141,6 +141,46 @@ function lerXlsx(buf: Uint8Array): Aba[] {
       linhas[r] = Array.from(linha, (x) => x ?? "");
     }
     abas.push({ nome: sh.getAttribute("name") ?? `Aba ${abas.length + 1}`, linhas: Array.from(linhas, (l) => l ?? []).filter((l) => l.some((c) => c)) });
+  }
+  if (!abas.length) throw new Error("A planilha não tem abas com dados.");
+  return abas;
+}
+
+// ---------------------------------------------------------------- Excel antigo (.xls, formato 97-2003)
+
+async function lerXls(buf: Uint8Array): Promise<Aba[]> {
+  // biblioteca carregada só quando aparece um .xls, para não pesar nas outras telas
+  const XLSX = await import("xlsx");
+  let wb: import("xlsx").WorkBook;
+  try {
+    wb = XLSX.read(buf, { type: "array", cellDates: true, cellFormula: false, cellHTML: false, cellStyles: false });
+  } catch {
+    throw new Error("Não consegui abrir a planilha. Ela pode estar protegida por senha ou corrompida.");
+  }
+  const ocultas = new Set((wb.Workbook?.Sheets ?? []).filter((s) => s.Hidden).map((s) => s.name));
+  const abas: Aba[] = [];
+  for (const nome of wb.SheetNames) {
+    if (ocultas.has(nome)) continue;
+    const ws = wb.Sheets[nome];
+    const linhas = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: "", blankrows: false });
+    abas.push({
+      nome,
+      linhas: linhas
+        .slice(0, 20000)
+        .map((l) =>
+          l.map((v) => {
+            if (v instanceof Date) {
+              // datas do .xls chegam no fuso local; somar 12h evita cair no dia anterior
+              const d = new Date(v.getTime() + 12 * 3600000);
+              return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+            }
+            if (typeof v === "number") return String(Math.round(v * 1e6) / 1e6);
+            if (typeof v === "boolean") return v ? "VERDADEIRO" : "FALSO";
+            return String(v ?? "").trim();
+          }),
+        )
+        .filter((l) => l.some((c) => c)),
+    });
   }
   if (!abas.length) throw new Error("A planilha não tem abas com dados.");
   return abas;
