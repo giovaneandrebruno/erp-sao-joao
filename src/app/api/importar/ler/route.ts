@@ -29,7 +29,8 @@ export async function POST(request: Request) {
   const def = area ? AREAS[area] : undefined;
   if (!caminho || !def) return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const gemini = process.env.GEMINI_API_KEY;
+  if (!gemini && !process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { erro: "A leitura automática de PDF e imagem ainda não está ligada. O arquivo foi guardado; para importar os dados agora, envie a planilha (Excel ou CSV).", semChave: true },
       { status: 501 },
@@ -42,10 +43,8 @@ export async function POST(request: Request) {
   const base64 = Buffer.from(await arquivo.arrayBuffer()).toString("base64");
   const ext = caminho.split(".").pop()?.toLowerCase() ?? "";
 
-  let anexo: Anthropic.ContentBlockParam;
-  if (ext === "pdf") anexo = { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } };
-  else if (ext in TIPOS_IMAGEM) anexo = { type: "image", source: { type: "base64", media_type: TIPOS_IMAGEM[ext as keyof typeof TIPOS_IMAGEM], data: base64 } };
-  else return NextResponse.json({ erro: "Esse tipo de arquivo não é lido automaticamente." }, { status: 415 });
+  const tipo = ext === "pdf" ? "application/pdf" : ext in TIPOS_IMAGEM ? TIPOS_IMAGEM[ext as keyof typeof TIPOS_IMAGEM] : null;
+  if (!tipo) return NextResponse.json({ erro: "Esse tipo de arquivo não é lido automaticamente." }, { status: 415 });
 
   const campos = def.campos.map((c) => `- ${c.rotulo}${c.obrigatorio ? " (obrigatório)" : ""}`).join("\n");
   const pedido = `Este arquivo é de uma marcenaria de móveis planejados e vai ser importado na área "${def.titulo}" do sistema de gestão.
@@ -60,6 +59,12 @@ Extraia TODOS os registros do arquivo como uma tabela:
 - Não invente dados e não pule linhas. Ignore totais, subtotais e cabeçalhos repetidos de página.
 - "observacao": uma frase curta em português sobre o que foi lido, ou sobre o que não deu para ler.`;
 
+  if (gemini) return lerComGemini(gemini, tipo, base64, pedido);
+
+  const anexo: Anthropic.ContentBlockParam =
+    tipo === "application/pdf"
+      ? { type: "document", source: { type: "base64", media_type: tipo, data: base64 } }
+      : { type: "image", source: { type: "base64", media_type: tipo, data: base64 } };
   try {
     const client = new Anthropic();
     const stream = client.messages.stream({
@@ -80,5 +85,49 @@ Extraia TODOS os registros do arquivo como uma tabela:
     if (e instanceof SyntaxError) return NextResponse.json({ erro: "A leitura veio incompleta. Tente de novo." }, { status: 500 });
     if (e instanceof Anthropic.APIError) return NextResponse.json({ erro: `Falha na leitura automática (${e.status}).` }, { status: 502 });
     throw e;
+  }
+}
+
+/** Mesma leitura usando o Gemini do Google (chave GEMINI_API_KEY; modelo em GEMINI_MODEL, se quiser trocar). */
+async function lerComGemini(chave: string, tipo: string, base64: string, pedido: string) {
+  const modelo = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": chave },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ inline_data: { mime_type: tipo, data: base64 } }, { text: pedido }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            cabecalho: { type: "ARRAY", items: { type: "STRING" } },
+            linhas: { type: "ARRAY", items: { type: "ARRAY", items: { type: "STRING" } } },
+            observacao: { type: "STRING" },
+          },
+          required: ["cabecalho", "linhas", "observacao"],
+        },
+        maxOutputTokens: 65536,
+      },
+    }),
+  });
+  if (r.status === 429) return NextResponse.json({ erro: "O limite gratuito de leituras foi atingido. Tente de novo daqui a pouco." }, { status: 429 });
+  if (r.status === 400 || r.status === 401 || r.status === 403) {
+    const corpo = await r.text();
+    const chaveRuim = /API_KEY|api key/i.test(corpo);
+    return NextResponse.json({ erro: chaveRuim ? "A chave do Gemini é inválida." : "O Gemini não aceitou o arquivo." }, { status: 502 });
+  }
+  if (!r.ok) return NextResponse.json({ erro: `Falha na leitura automática (${r.status}).` }, { status: 502 });
+  const resposta = (await r.json()) as { candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[] };
+  const candidato = resposta.candidates?.[0];
+  const texto = candidato?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  try {
+    const dados = JSON.parse(texto) as { cabecalho: string[]; linhas: string[][]; observacao: string };
+    if (!Array.isArray(dados.cabecalho) || !Array.isArray(dados.linhas)) throw new SyntaxError("formato");
+    if (candidato?.finishReason === "MAX_TOKENS") dados.observacao = `${dados.observacao ?? ""} O arquivo é muito grande: só parte dele foi lida.`;
+    return NextResponse.json(dados);
+  } catch {
+    const motivo = candidato?.finishReason === "MAX_TOKENS" ? "O arquivo é grande demais para ler de uma vez." : "A leitura veio incompleta. Tente de novo.";
+    return NextResponse.json({ erro: motivo }, { status: 500 });
   }
 }
