@@ -37,7 +37,7 @@ export function Checkin({ tipo, id }: { tipo: "marco" | "chamado"; id: string })
 
   return (
     <div>
-      <button onClick={registrar} disabled={pendente} className="w-full rounded-2xl bg-gradient-to-r from-violeta to-ciano py-4 text-base font-semibold text-white shadow-[0_10px_30px_-10px_rgb(108_71_255/0.8)] disabled:opacity-60">
+      <button onClick={registrar} disabled={pendente} className="w-full rounded-2xl bg-marinho py-4 text-base font-semibold text-white shadow-[0_10px_30px_-10px_rgb(19_41_75/0.8)] disabled:opacity-60">
         {pendente ? "Registrando…" : "📍 Cheguei no cliente"}
       </button>
       {aviso && <p className="mt-2 text-center text-xs text-stone-500">{aviso}</p>}

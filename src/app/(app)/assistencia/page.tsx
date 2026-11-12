@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { JanelaBotao } from "@/components/janela";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Titulo, inputCls } from "@/components/ui";
 import { ROTULOS2, data } from "@/lib/format";
@@ -22,9 +23,41 @@ export default async function AssistenciaPage({ searchParams }: PageProps<"/assi
     supabase.from("parceiros").select("id, nome").eq("tipo", "montador").eq("ativo", true).order("nome"),
   ]);
 
+  const novoChamado = (
+    <JanelaBotao rotulo="Abrir chamado" titulo="Abrir chamado" descricao="Registre o problema e, se já souber, a data da visita e o montador.">
+      <form action={abrirChamado} className="grid gap-3 md:grid-cols-6">
+        <Campo rotulo="Cliente *" className="md:col-span-2">
+          <select name="cliente_id" required defaultValue="" className={inputCls}>
+            <option value="" disabled>Selecione...</option>
+            {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Pedido" className="md:col-span-2">
+          <select name="pedido_id" defaultValue="" className={inputCls}>
+            <option value="">—</option>
+            {pedidos?.map((p) => <option key={p.id} value={p.id}>#{p.numero} · {p.cliente_nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Prioridade" className="md:col-span-1">
+          <select name="prioridade" defaultValue="normal" className={inputCls}><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option></select>
+        </Campo>
+        <label className="flex items-end gap-2 pb-2 text-sm md:col-span-1"><input type="checkbox" name="em_garantia" defaultChecked /> Em garantia</label>
+        <Campo rotulo="O que aconteceu *" className="md:col-span-6"><textarea name="descricao" required rows={2} placeholder="Porta do armário desalinhada, corrediça travando..." className={inputCls} /></Campo>
+        <Campo rotulo="Data da visita" className="md:col-span-2"><input type="date" name="data_agendada" className={inputCls} /></Campo>
+        <Campo rotulo="Montador" className="md:col-span-2">
+          <select name="responsavel_id" defaultValue="" className={inputCls}>
+            <option value="">—</option>
+            {montadores?.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+          </select>
+        </Campo>
+        <div className="flex items-end md:col-span-2"><Botao type="submit">Abrir chamado</Botao></div>
+      </form>
+    </JanelaBotao>
+  );
+
   return (
     <>
-      <Titulo acao={<Link href={resolvidos ? "/assistencia" : "/assistencia?resolvidos=1"} className="text-sm text-madeira-700 hover:underline">{resolvidos ? "Ocultar resolvidos" : "Mostrar resolvidos"}</Link>}>
+      <Titulo acao={<div className="flex items-center gap-4"><Link href={resolvidos ? "/assistencia" : "/assistencia?resolvidos=1"} className="text-sm text-madeira-700 hover:underline">{resolvidos ? "Ocultar resolvidos" : "Mostrar resolvidos"}</Link>{novoChamado}</div>}>
         Assistência técnica
       </Titulo>
 
@@ -65,36 +98,6 @@ export default async function AssistenciaPage({ searchParams }: PageProps<"/assi
         {!chamados?.length && <Cartao><p className="text-sm text-stone-400">Nenhum chamado em aberto.</p></Cartao>}
       </div>
 
-      <Cartao>
-        <h2 className="mb-3 font-semibold">Abrir chamado</h2>
-        <form action={abrirChamado} className="grid gap-3 md:grid-cols-6">
-          <Campo rotulo="Cliente *" className="md:col-span-2">
-            <select name="cliente_id" required defaultValue="" className={inputCls}>
-              <option value="" disabled>Selecione...</option>
-              {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </Campo>
-          <Campo rotulo="Pedido" className="md:col-span-2">
-            <select name="pedido_id" defaultValue="" className={inputCls}>
-              <option value="">—</option>
-              {pedidos?.map((p) => <option key={p.id} value={p.id}>#{p.numero} · {p.cliente_nome}</option>)}
-            </select>
-          </Campo>
-          <Campo rotulo="Prioridade" className="md:col-span-1">
-            <select name="prioridade" defaultValue="normal" className={inputCls}><option value="baixa">Baixa</option><option value="normal">Normal</option><option value="alta">Alta</option></select>
-          </Campo>
-          <label className="flex items-end gap-2 pb-2 text-sm md:col-span-1"><input type="checkbox" name="em_garantia" defaultChecked /> Em garantia</label>
-          <Campo rotulo="O que aconteceu *" className="md:col-span-6"><textarea name="descricao" required rows={2} placeholder="Porta do armário desalinhada, corrediça travando..." className={inputCls} /></Campo>
-          <Campo rotulo="Data da visita" className="md:col-span-2"><input type="date" name="data_agendada" className={inputCls} /></Campo>
-          <Campo rotulo="Montador" className="md:col-span-2">
-            <select name="responsavel_id" defaultValue="" className={inputCls}>
-              <option value="">—</option>
-              {montadores?.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-            </select>
-          </Campo>
-          <div className="flex items-end md:col-span-2"><Botao type="submit">Abrir chamado</Botao></div>
-        </form>
-      </Cartao>
     </>
   );
 }

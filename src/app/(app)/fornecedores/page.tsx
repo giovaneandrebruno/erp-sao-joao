@@ -1,5 +1,6 @@
+import { JanelaBotao } from "@/components/janela";
 import { createClient } from "@/lib/supabase/server";
-import { Botao, Campo, Cartao, Tabela, Titulo, inputCls } from "@/components/ui";
+import { Botao, Campo, Tabela, Titulo, inputCls } from "@/components/ui";
 import { salvarFornecedor } from "./actions";
 
 export default async function FornecedoresPage() {
@@ -9,6 +10,19 @@ export default async function FornecedoresPage() {
   return (
     <>
       <Titulo>Fornecedores</Titulo>
+      <div className="mb-4 flex justify-end">
+        <JanelaBotao rotulo="Novo fornecedor" titulo="Novo fornecedor">
+          <form action={salvarFornecedor.bind(null, null)} className="grid gap-3 md:grid-cols-6">
+            <Campo rotulo="Nome *" className="md:col-span-3"><input name="nome" required className={inputCls} /></Campo>
+            <Campo rotulo="CNPJ" className="md:col-span-3"><input name="cpf_cnpj" className={inputCls} /></Campo>
+            <Campo rotulo="Pessoa de contato" className="md:col-span-2"><input name="contato" className={inputCls} /></Campo>
+            <Campo rotulo="Telefone" className="md:col-span-2"><input name="telefone" className={inputCls} /></Campo>
+            <Campo rotulo="E-mail" className="md:col-span-2"><input name="email" type="email" className={inputCls} /></Campo>
+            <Campo rotulo="Observações" className="md:col-span-6"><textarea name="observacoes" rows={2} className={inputCls} /></Campo>
+            <div className="md:col-span-6"><Botao type="submit">Salvar</Botao></div>
+          </form>
+        </JanelaBotao>
+      </div>
       <div className="mb-8">
         <Tabela cabecalho={["Nome", "Contato", "Telefone", "E-mail", "CNPJ"]} vazio={!fornecedores?.length}>
           {fornecedores?.map((f) => (
@@ -22,18 +36,6 @@ export default async function FornecedoresPage() {
           ))}
         </Tabela>
       </div>
-      <Cartao>
-        <h2 className="mb-3 font-semibold">Novo fornecedor</h2>
-        <form action={salvarFornecedor.bind(null, null)} className="grid gap-3 md:grid-cols-6">
-          <Campo rotulo="Nome *" className="md:col-span-3"><input name="nome" required className={inputCls} /></Campo>
-          <Campo rotulo="CNPJ" className="md:col-span-3"><input name="cpf_cnpj" className={inputCls} /></Campo>
-          <Campo rotulo="Pessoa de contato" className="md:col-span-2"><input name="contato" className={inputCls} /></Campo>
-          <Campo rotulo="Telefone" className="md:col-span-2"><input name="telefone" className={inputCls} /></Campo>
-          <Campo rotulo="E-mail" className="md:col-span-2"><input name="email" type="email" className={inputCls} /></Campo>
-          <Campo rotulo="Observações" className="md:col-span-6"><textarea name="observacoes" rows={2} className={inputCls} /></Campo>
-          <div className="md:col-span-6"><Botao type="submit">Salvar</Botao></div>
-        </form>
-      </Cartao>
     </>
   );
 }

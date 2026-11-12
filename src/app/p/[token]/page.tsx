@@ -43,7 +43,7 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
     <main className="mx-auto max-w-3xl px-4 py-10 md:py-16">
       <header className="mb-10 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violeta to-ciano text-lg font-semibold text-white">{p.empresa.nome.slice(0, 1)}</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marinho text-lg font-semibold text-white">{p.empresa.nome.slice(0, 1)}</div>
           <div>
             <div className="text-lg font-semibold tracking-tight text-stone-900">{p.empresa.nome}</div>
             <div className="text-xs text-stone-500">{[p.empresa.cidade, p.empresa.uf].filter(Boolean).join(" / ")}</div>
