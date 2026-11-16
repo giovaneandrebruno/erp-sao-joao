@@ -58,7 +58,7 @@ export default async function EquipePage() {
           <NovoUsuario parceiros={(parceiros ?? []).filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
         </JanelaBotao>
       </div>
-      <p className="mb-4 text-sm text-stone-500">Administrador vê tudo. Escritório / vendas não vê financeiro, comissões, relatórios, equipe e configurações. Montador só usa o app de campo e precisa estar ligado à pessoa da equipe.</p>
+      <p className="mb-4 text-sm text-stone-500">Administrador vê tudo. Escritório / vendas não vê financeiro, comissões, relatórios, equipe e configurações. Montador não tem acesso às telas do sistema.</p>
       <div className="mb-6">
         <Tabela cabecalho={["E-mail", "Nome", "Perfil", "Pessoa da equipe", ""]} vazio={!perfis?.length}>
           {perfis?.map((u) => (
