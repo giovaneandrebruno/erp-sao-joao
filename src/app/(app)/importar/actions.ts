@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { perfilAtual } from "@/lib/perfil";
-import { AREAS, converter, normalizar, type Area, type Opcoes } from "@/lib/importacao";
+import { AREAS, chaveOrdem, converter, normalizar, separarCliente, type Area, type Opcoes } from "@/lib/importacao";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 
@@ -39,7 +39,11 @@ function emLotes<T>(lista: T[], tamanho = LOTE) {
   return lotes;
 }
 
-type Existente = { id: string; chave_importacao: string | null; importacao_id: string | null; nome?: string | null; cpf_cnpj?: string | null; codigo?: string | null };
+type Existente = {
+  id: string; chave_importacao: string | null; importacao_id: string | null;
+  nome?: string | null; cpf_cnpj?: string | null; codigo?: string | null;
+  os?: string | null; cliente_nome?: string | null; ambiente?: string | null; cliente_id?: string | null;
+};
 
 export async function importarDados(entrada: {
   area: Area;
@@ -71,14 +75,20 @@ export async function importarDados(entrada: {
     if (eImp) return { erro: eImp.message };
 
     // o que já existe no sistema
-    const natural = area === "clientes" || area === "fornecedores" || area === "estoque";
-    const colunas = ["id", "chave_importacao", "importacao_id", ...(area === "estoque" ? ["nome", "codigo"] : natural ? ["nome", "cpf_cnpj"] : [])].join(", ");
+    // produção: as OS lançadas à mão (ou antes desta importação) são reconhecidas pelo nº da OS ou pelo cliente
+    const natural = area === "clientes" || area === "fornecedores" || area === "estoque" || area === "producao";
+    const extrasColunas = area === "estoque" ? ["nome", "codigo"] : area === "producao" ? ["os", "cliente_nome", "ambiente", "cliente_id"] : natural ? ["nome", "cpf_cnpj"] : [];
+    const colunas = ["id", "chave_importacao", "importacao_id", ...extrasColunas].join(", ");
     const existentes = await buscarTodos<Existente>(supabase, def.tabela, colunas, !natural);
     const porChave = new Map<string, Existente>();
     const porNatural = new Map<string, Existente>();
+    const ordensPorChave = new Map<string, Existente[]>();
     for (const e of existentes) {
       if (e.chave_importacao) porChave.set(e.chave_importacao, e);
-      if (natural) {
+      if (area === "producao") {
+        // pelo nº da OS e também pelo cliente (para quando a OS for preenchida ou mudada depois)
+        for (const k of new Set([chaveOrdem(e.os, e.cliente_nome), chaveOrdem(null, e.cliente_nome)])) ordensPorChave.set(k, [...(ordensPorChave.get(k) ?? []), e]);
+      } else if (natural) {
         if (area === "estoque") {
           if (e.codigo) porNatural.set(`cod:${normalizar(e.codigo)}`, e);
           if (e.nome) porNatural.set(`nome:${normalizar(e.nome)}`, e);
@@ -90,17 +100,12 @@ export async function importarDados(entrada: {
       }
     }
 
-    // referências: nº do pedido (produção) e cliente/fornecedor (financeiro)
-    const pedidos = new Map<number, string>();
-    if (area === "producao" && mapeados.has("pedido")) {
-      const numeros = [...new Set(registros.map((r) => r.ref.pedido).filter((n): n is number => typeof n === "number"))];
-      for (const lote of emLotes(numeros, 300)) {
-        const { data } = await supabase.from("pedidos").select("id, numero").in("numero", lote);
-        for (const p of data ?? []) pedidos.set(p.numero, p.id);
-      }
-    }
+    // referências: cliente da OS (produção) e cliente/fornecedor (financeiro)
     const clientesPorNome = new Map<string, string>();
     const fornecedoresPorNome = new Map<string, string>();
+    if (area === "producao") {
+      for (const c of await buscarTodos<{ id: string; nome: string }>(supabase, "clientes", "id, nome")) clientesPorNome.set(normalizar(separarCliente(c.nome).cliente), c.id);
+    }
     if (area === "financeiro" && mapeados.has("pessoa")) {
       for (const c of await buscarTodos<{ id: string; nome: string }>(supabase, "clientes", "id, nome")) clientesPorNome.set(normalizar(c.nome), c.id);
       for (const f of await buscarTodos<{ id: string; nome: string }>(supabase, "fornecedores", "id, nome")) fornecedoresPorNome.set(normalizar(f.nome), f.id);
@@ -111,7 +116,15 @@ export async function importarDados(entrada: {
     const inserir: Record<string, unknown>[] = [];
     for (const r of registros) {
       let achado = porChave.get(r.chave);
-      if (!achado && natural) {
+      if (achado && usados.has(achado.id)) achado = undefined;
+      if (!achado && area === "producao") {
+        // a mesma OS: primeiro pelo nº com o mesmo cliente, depois só pelo nº, depois só pelo cliente
+        const livres = (k: string) => (ordensPorChave.get(k) ?? []).filter((e) => !usados.has(e.id));
+        const mesmoCliente = (e: Existente) => normalizar(e.cliente_nome ?? "") === normalizar(String(r.valores.cliente_nome ?? ""));
+        const peloNumero = livres(r.chave.replace(/#\d+$/, ""));
+        achado = peloNumero.find(mesmoCliente) ?? peloNumero.find((e) => !r.chave.startsWith("cli:") || mesmoCliente(e)) ?? livres(chaveOrdem(null, r.valores.cliente_nome)).find(mesmoCliente);
+      }
+      if (!achado && natural && area !== "producao") {
         const base = r.chave.replace(/#\d+$/, "");
         achado = porNatural.get(base);
         if (!achado && area === "estoque" && r.valores.nome) achado = porNatural.get(`nome:${normalizar(String(r.valores.nome))}`);
@@ -119,7 +132,12 @@ export async function importarDados(entrada: {
       }
       if (achado && usados.has(achado.id)) achado = undefined;
       const linha: Record<string, unknown> = { ...r.valores, extras: r.extras, chave_importacao: r.chave };
-      if (area === "producao" && mapeados.has("pedido")) linha.pedido_id = r.ref.pedido != null ? pedidos.get(r.ref.pedido) ?? null : null;
+      if (area === "producao") {
+        // o que foi acertado à mão na OS (cliente ligado, ambiente) não é apagado quando a planilha não traz
+        const cliente = r.ref.pessoa ? clientesPorNome.get(normalizar(r.ref.pessoa)) : undefined;
+        linha.cliente_id = achado?.cliente_id ?? cliente ?? null;
+        linha.ambiente = r.valores.ambiente ?? achado?.ambiente ?? null;
+      }
       if (area === "financeiro" && mapeados.has("pessoa")) {
         const nome = r.ref.pessoa ? normalizar(r.ref.pessoa) : "";
         const ehPagar = r.valores.tipo === "pagar";
@@ -129,7 +147,9 @@ export async function importarDados(entrada: {
       if (achado) {
         usados.add(achado.id);
         // cadastro feito à mão continua sendo "do sistema": só os dados são atualizados
-        atualizar.push({ id: achado.id, ...linha, importacao_id: achado.importacao_id ? imp.id : null });
+        // a OS da planilha passa a ser da importação (sai se sumir da planilha); cadastro feito à mão
+        // de cliente, fornecedor ou produto continua sendo "do sistema": só os dados são atualizados
+        atualizar.push({ id: achado.id, ...linha, importacao_id: achado.importacao_id || area === "producao" ? imp.id : null });
       } else {
         inserir.push({ ...linha, importacao_id: imp.id });
       }

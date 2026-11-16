@@ -252,7 +252,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
                       {resultado.registros.slice(0, 50).map((r, i) => (
                         <tr key={i}>
                           {camposUsados.map((f) => {
-                            const v = f.chave === "pedido" ? r.ref.pedido : f.chave === "pessoa" ? r.ref.pessoa : f.chave === "situacao" ? (r.valores.pago_em ? "pago" : "aberto") : f.chave === "codigo" && area === "producao" ? r.chave.replace(/^cod:/, "") : r.valores[f.chave];
+                            const v = f.chave === "pessoa" ? r.ref.pessoa : f.chave === "situacao" ? (r.valores.pago_em ? "pago" : "aberto") : f.chave === "data_venda" ? (r.valores.data_venda ? String(r.valores.data_venda).split("-").reverse().join("/") : r.valores.data_venda_obs) : r.valores[f.chave];
                             const texto = v == null || v === "" ? "—" : f.tipo === "data" ? String(v).split("-").reverse().join("/") : f.tipo === "numero" ? Number(v).toLocaleString("pt-BR") : String(v).replace("_", " ");
                             return <td key={f.chave} className="max-w-48 truncate px-3 py-1.5">{texto}</td>;
                           })}

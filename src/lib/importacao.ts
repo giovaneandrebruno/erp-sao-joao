@@ -4,8 +4,10 @@
  * Usado no navegador (pré-visualização) e no servidor (gravação), para os dois darem o mesmo resultado.
  */
 
+import { SIGLAS, STATUS_PCP, dataDoTexto, somarDias, type SiglaStatus } from "@/lib/pcp";
+
 export type Area = "producao" | "clientes" | "fornecedores" | "estoque" | "financeiro";
-export type TipoCampo = "texto" | "numero" | "data" | "etapa" | "tipo_produto" | "tipo_lancamento" | "situacao" | "unidade" | "inteiro";
+export type TipoCampo = "texto" | "marco" | "status" | "numero" | "data" | "tipo_produto" | "tipo_lancamento" | "situacao" | "unidade" | "inteiro";
 
 export type CampoArea = {
   chave: string;
@@ -33,17 +35,41 @@ export const AREAS: Record<Area, DefinicaoArea> = {
     titulo: "Produção (PCP)",
     tabela: "ordens_producao",
     caminho: "/producao",
-    explicacao: "Planilha de planejamento da produção: cada linha vira uma ordem de produção no quadro.",
+    explicacao: "Planilha de PCP: cada linha vira uma ordem de serviço, com as mesmas colunas e o STATUS pela legenda.",
+    // nomes testados já sem acento e em minúsculas; a ordem importa (o primeiro que reconhece fica com a coluna)
     campos: [
-      { chave: "codigo", rotulo: "Código / Nº da OS ou OP", tipo: "texto", reconhece: /^(c[oó]d|n[ºo°]?\s*(da\s*)?o[ps]\b|o[ps]$|id$|ordem)/i },
-      { chave: "pedido", rotulo: "Nº do pedido", tipo: "inteiro", reconhece: /pedido|contrato|^ped\b/i },
-      { chave: "cliente_nome", rotulo: "Cliente", tipo: "texto", reconhece: /cliente|obra|^nome/i, prefere: /^cliente$/i },
-      { chave: "ambiente", rotulo: "Ambiente", tipo: "texto", reconhece: /^(?!.*(n[uú]mero|qtd|quant|total)).*(ambiente|c[oô]modo|local)/i },
-      { chave: "descricao", rotulo: "Descrição / Móvel", tipo: "texto", reconhece: /^(?!.*memorial)(descri|m[oó]vel|item|pe[cç]a|m[oó]dulo|produto|servi[cç]o$|projeto$)/i },
-      { chave: "etapa", rotulo: "Etapa / Status", tipo: "etapa", reconhece: /etapa|status|situa|fase|andamento/i, prefere: /^(status|etapa)$/i },
-      { chave: "responsavel", rotulo: "Responsável", tipo: "texto", reconhece: /respons|marceneiro|montador|equipe|operador|setor/i, prefere: /^respons[aá]vel$|marceneiro/i },
-      { chave: "prazo", rotulo: "Prazo / Entrega", tipo: "data", reconhece: /prazo|entrega|data\s*(prev|fim|final)|previs|t[eé]rmino|conclus|limite/i, prefere: /limite\s*(de\s*)?fabrica|prazo\s*limite\s*entrega|data\s*(de\s*)?entrega/i },
-      { chave: "observacoes", rotulo: "Observações", tipo: "texto", reconhece: /obs|nota|coment/i },
+      { chave: "os", rotulo: "Ordem de serviço (OS)", tipo: "texto", reconhece: /ordem de servico|^\(?o\.?s\.?\)?$|^n.{0,3}o\.?s\b|^codigo/ },
+      { chave: "cliente_nome", rotulo: "Cliente", tipo: "texto", obrigatorio: true, reconhece: /^cliente|^nome|^obra$/, prefere: /^cliente$/ },
+      { chave: "consultor", rotulo: "Consultor", tipo: "texto", reconhece: /^consultor|^vendedor/ },
+      { chave: "arquiteto", rotulo: "Arquiteto", tipo: "texto", reconhece: /arquitet/ },
+      { chave: "data_venda", rotulo: "Data venda", tipo: "marco", reconhece: /data.*venda|^venda$/ },
+      { chave: "ambientes", rotulo: "Número ambientes totais", tipo: "texto", reconhece: /ambientes/ },
+      { chave: "memorial", rotulo: "Memorial descritivo realizado", tipo: "marco", reconhece: /memorial/ },
+      { chave: "medicao", rotulo: "Medição realizada", tipo: "marco", reconhece: /medicao/ },
+      { chave: "prazo_texto", rotulo: "Prazos a cumprir", tipo: "texto", reconhece: /prazo/, prefere: /prazos? a cumprir/ },
+      { chave: "status_pcp", rotulo: "Status", tipo: "status", reconhece: /^status|^etapa|^sigla/ },
+      { chave: "posicao", rotulo: "Posição", tipo: "texto", reconhece: /^posicao|^situacao/ },
+      { chave: "inicio_ajustes", rotulo: "Início ajustes", tipo: "marco", reconhece: /inicio.*ajuste/ },
+      { chave: "limite_ajustes", rotulo: "Data limite ajustes", tipo: "marco", reconhece: /limite.*ajuste/ },
+      { chave: "inicio_detalhamento", rotulo: "Início detalhamento", tipo: "marco", reconhece: /inicio.*detalh/ },
+      { chave: "resp_detalhamento", rotulo: "Responsável detalhamento", tipo: "texto", reconhece: /respons.*detalh/ },
+      { chave: "limite_detalhamento", rotulo: "Data limite detalhamento", tipo: "marco", reconhece: /limite.*detalh/ },
+      { chave: "envio_consultor", rotulo: "Envio projeto consultor", tipo: "marco", reconhece: /envio/ },
+      { chave: "aprovacao_cliente", rotulo: "Aprovação do projeto cliente", tipo: "marco", reconhece: /aprovacao/ },
+      { chave: "compra_materia_prima", rotulo: "Compra matéria-prima", tipo: "marco", reconhece: /compra|materia.?prima/ },
+      { chave: "liberacao_corte", rotulo: "Data liberação plano de corte", tipo: "marco", reconhece: /liberacao|plano de corte/ },
+      { chave: "inicio_pre_montagem", rotulo: "Início pré-montagem", tipo: "marco", reconhece: /inicio.*pre.?montagem/ },
+      { chave: "resp_fabricacao", rotulo: "Responsável (fabricação)", tipo: "texto", reconhece: /^responsavel$|respons.*fabric|marceneiro/ },
+      { chave: "limite_fabricacao", rotulo: "Data limite fabricação e pré-montagem", tipo: "marco", reconhece: /limite.*fabric/ },
+      { chave: "agendamento_entrega", rotulo: "Agendamento entrega", tipo: "marco", reconhece: /agendamento/ },
+      { chave: "previsao_nf", rotulo: "Previsão faturamento NF", tipo: "marco", reconhece: /faturamento|nota fiscal|\bnf\b/ },
+      { chave: "inicio_montagem", rotulo: "Início montagem", tipo: "marco", reconhece: /inicio (da )?montagem/ },
+      { chave: "montador", rotulo: "Montador", tipo: "texto", reconhece: /^montador/ },
+      { chave: "termino_montagem", rotulo: "Término de montagem máximo", tipo: "marco", reconhece: /termino/ },
+      { chave: "check_list", rotulo: "Check list", tipo: "marco", reconhece: /che(c)?k.?list/ },
+      { chave: "pendencias", rotulo: "Pendência montagem / observação", tipo: "texto", reconhece: /pendencia|observ|^obs/ },
+      { chave: "telefone", rotulo: "Telefone para contato", tipo: "texto", reconhece: /telefone|celular|whats|^fone/ },
+      { chave: "endereco", rotulo: "Endereço", tipo: "texto", reconhece: /endereco/ },
     ],
   },
   clientes: {
@@ -170,22 +196,6 @@ export function dataISO(v: string | undefined | null, anoBase = new Date().getFu
   return null;
 }
 
-export type Etapa = "aguardando" | "corte" | "fita_borda" | "montagem" | "acabamento" | "pronto" | "instalacao" | "concluido";
-
-export function etapaDe(v: string): Etapa | null {
-  const s = normalizar(v);
-  if (!s) return null;
-  if (/conclu|finaliz|entregue|encerr|^ok$|^feito|^100 ?%/.test(s)) return "concluido";
-  if (/instal|entrega|montagem (no|na|em) (cliente|obra)|na obra|che(c)?k ?-?list|itens pendentes/.test(s)) return "instalacao";
-  if (/pronto|embal|expedi|aguardando entrega/.test(s)) return "pronto";
-  if (/acab|pintura|laca|verniz|revis/.test(s)) return "acabamento";
-  if (/fita|borda|bordo/.test(s)) return "fita_borda";
-  if (/corte|cortad|usinag|fura[cç]|cnc|seccion/.test(s)) return "corte";
-  if (/mont|fabrica/.test(s)) return "montagem";
-  if (/aguard|pendente|nao inici|a fazer|fila|programad|planejad|novo/.test(s)) return "aguardando";
-  return null;
-}
-
 function tipoProduto(v: string) {
   const s = normalizar(v);
   if (/serv|mao de obra/.test(s)) return "servico";
@@ -229,9 +239,9 @@ export function mapearColunas(area: Area, cabecalho: string[], amostra: string[]
     let nota = -Infinity;
     cabecalho.forEach((c, i) => {
       const nome = normalizarCab(c ?? "");
-      if (mapa[i] !== null || !nome || !campo.reconhece.test(nome)) return;
+      if (mapa[i] !== null || !nome || !reconhece(campo, nome)) return;
       let n = 0;
-      if (campo.prefere?.test(nome)) n += 5;
+      if (campo.prefere?.test(nome) || campo.prefere?.test(normalizar(nome))) n += 5;
       if (campo.tipo === "data" || campo.tipo === "numero" || campo.tipo === "inteiro") n += encaixe(i, campo.tipo) * 4;
       n -= nome.length / 100 + i / 1000;
       if (n > nota) { nota = n; melhor = i; }
@@ -258,6 +268,8 @@ export function acharLegenda(tabela: string[][], linhaCab: number): Record<strin
 }
 
 const normalizarCab = (c: string) => c.replace(/[_\-]+/g, " ").trim();
+/** O nome da coluna serve como está ou sem acentos/maiúsculas (as regras da produção usam a forma simples). */
+const reconhece = (campo: CampoArea, nome: string) => campo.reconhece.test(nome) || campo.reconhece.test(normalizar(nome));
 
 /** Acha a linha de cabeçalho nas primeiras linhas (planilhas de PCP costumam ter título e legenda em cima). */
 export function avaliarAba(area: Area, tabela: string[][]): { linha: number; nota: number } {
@@ -268,7 +280,7 @@ export function avaliarAba(area: Area, tabela: string[][]): { linha: number; not
     const cel = tabela[i].map((c) => (c ?? "").trim()).filter(Boolean);
     if (cel.length < 2) continue;
     const textos = cel.filter((c) => numeroBR(c) === null && !dataISO(c));
-    const batidas = cel.filter((c) => campos.some((f) => f.reconhece.test(normalizarCab(c)))).length;
+    const batidas = cel.filter((c) => campos.some((f) => reconhece(f, normalizarCab(c)))).length;
     const nota = batidas * 3 + textos.length - (cel.length - textos.length) * 2;
     if (nota > melhorNota) { melhorNota = nota; melhor = i; }
   }
@@ -325,7 +337,7 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
     for (const campo of def.campos) {
       if (!camposMapeados.has(campo.chave)) continue;
       const cru = bruto[campo.chave] ?? "";
-      const ignoraVazio = campo.tipo === "data" || campo.tipo === "numero" || campo.tipo === "inteiro" || campo.chave === "codigo";
+      const ignoraVazio = campo.tipo === "data" || campo.tipo === "numero" || campo.tipo === "inteiro" || campo.chave === "codigo" || campo.chave === "os";
       const v = ignoraVazio && VAZIOS.test(cru) ? "" : cru;
       let saida: string | number | null = null;
       switch (campo.tipo) {
@@ -333,11 +345,16 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
         case "numero": saida = numeroBR(v); if (v && saida === null) avisos.push(`Linha ${nLinha}: "${v}" não é um número (${campo.rotulo}).`); break;
         case "inteiro": { const x = numeroBR(v.replace(/[^\d,.\-]/g, "")); saida = x === null ? null : Math.trunc(x); break; }
         case "data": saida = dataISO(v, anoBase); if (v && !saida) avisos.push(`Linha ${nLinha}: não entendi a data "${v}" (${campo.rotulo}).`); break;
-        case "etapa": {
-          const nome = opcoes.legenda?.[v.toUpperCase()];
-          saida = (nome && etapaDe(nome)) || etapaDe(v) || (v ? "aguardando" : null);
-          // a etapa do sistema é mais resumida que a da planilha: o status original fica guardado
-          if (v) extras[campo.rotulo.split(" /")[0]] = nome ? `${v} · ${nome}` : v;
+        case "marco": {
+          // como na planilha: "OK", "?", "-", "PENDENTE" ou uma data (número de série do Excel vira dd/mm/aaaa)
+          const serial = /^\d{5}(\.\d+)?$/.test(v) ? dataISO(v) : null;
+          saida = serial ? serial.split("-").reverse().join("/") : v ? v.slice(0, 500) : null;
+          break;
+        }
+        case "status": {
+          const sigla = siglaStatus(v, opcoes.legenda);
+          if (v && !sigla) { avisos.push(`Linha ${nLinha}: status "${v}" não está na legenda; ficou como VR.`); extras["Status na planilha"] = v; }
+          saida = sigla ?? "VR";
           break;
         }
         case "tipo_produto": saida = tipoProduto(v); break;
@@ -352,14 +369,12 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
 
     // ajustes por área
     if (area === "producao") {
-      ref.pedido = (valores.pedido as number | null) ?? null;
-      delete valores.pedido;
-      const codigo = valores.codigo as string | null | undefined;
-      delete valores.codigo;
-      if (!valores.descricao) {
-        if (!codigo && !valores.cliente_nome) { ignoradas++; if (ignoradas <= 15) avisos.push(`Linha ${nLinha} ignorada: sem descrição nem cliente.`); continue; }
-        valores.descricao = codigo ? `OS ${codigo}` : "Projeto";
-      }
+      // anotações soltas abaixo da tabela (ex.: "DATA VENDA | PRAZO A CUMPRIR | SOMA DIAS =") não são OS
+      const nome = String(valores.cliente_nome ?? "");
+      const os = bruto.os ?? "";
+      const anotacao = numeroBR(nome) !== null || !!dataISO(nome) || (!bruto.status_pcp && /[a-z]/i.test(os) && !/\d/.test(os)) || (!bruto.status_pcp && !!dataISO(os));
+      if (anotacao) { ignoradas++; if (ignoradas <= 15) avisos.push(`Linha ${nLinha} ignorada: parece anotação, não uma OS.`); continue; }
+      ajustarOrdem(valores, ref, registros.length + 1);
     }
     if (area === "financeiro") {
       let valor = valores.valor as number;
@@ -383,13 +398,11 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
       if ("tipo" in valores && !valores.tipo) valores.tipo = "materia_prima";
       if ("unidade_medida" in valores && !valores.unidade_medida) valores.unidade_medida = "un";
     }
-    if (area === "producao" && "etapa" in valores && !valores.etapa) valores.etapa = "aguardando";
 
     // chave que identifica a mesma linha numa planilha editada depois
     const k = (s: unknown) => normalizar(String(s ?? ""));
     let base: string;
-    const codigoBruto = bruto.codigo && !VAZIOS.test(bruto.codigo) ? bruto.codigo : "";
-    if (area === "producao") base = codigoBruto ? `cod:${k(codigoBruto)}` : [ref.pedido ?? "", k(valores.cliente_nome), k(valores.ambiente), k(valores.descricao)].join("|");
+    if (area === "producao") base = chaveOrdem(valores.os, valores.cliente_nome);
     else if (area === "clientes" || area === "fornecedores") {
       const doc = String(valores.cpf_cnpj ?? "").replace(/\D/g, "");
       base = doc.length >= 11 ? `doc:${doc}` : `nome:${k(valores.nome)}`;
@@ -404,4 +417,61 @@ export function converter(area: Area, cabecalho: string[], linhas: string[][], m
   }
   if (ignoradas > 15) avisos.push(`… e mais ${ignoradas - 15} linha(s) ignoradas.`);
   return { registros, avisos, ignoradas };
+}
+
+// ---------------------------------------------------------------- produção (PCP)
+
+/** Sigla do STATUS: a própria sigla, ou o nome dela como está na legenda da planilha ou do sistema. */
+export function siglaStatus(v: string, legenda: Record<string, string> = {}): SiglaStatus | null {
+  const t = v.trim().toUpperCase();
+  if (!t) return null;
+  if (SIGLAS.includes(t as SiglaStatus)) return t as SiglaStatus;
+  const n = normalizar(t).replace(/che(c)?k ?-?list/, "check list");
+  for (const [sigla, nome] of Object.entries(legenda)) {
+    if (SIGLAS.includes(sigla as SiglaStatus) && normalizar(nome).replace(/che(c)?k ?-?list/, "check list") === n) return sigla as SiglaStatus;
+  }
+  return STATUS_PCP.find((s) => normalizar(s.nome) === n)?.sigla ?? null;
+}
+
+/** Mesma OS numa planilha editada depois: pelo número da OS, ou pelo nome do cliente quando a OS está em branco. */
+export function chaveOrdem(os: unknown, cliente: unknown) {
+  const o = String(os ?? "").trim();
+  return o && !VAZIOS.test(o) ? `os:${normalizar(o)}` : `cli:${normalizar(String(cliente ?? ""))}`;
+}
+
+/** "DANILO E TUANI - JARINU (SUITES)" → cliente "DANILO E TUANI", ambiente "SUITES". */
+export function separarCliente(nome: string) {
+  const parenteses = nome.match(/\(([^)]+)\)\s*$/);
+  const semParenteses = nome.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const [base, ...resto] = semParenteses.split(/\s+-\s+/);
+  const ambiente = parenteses ? parenteses[1].trim() : resto.length ? resto.join(" - ").trim() : null;
+  return { cliente: base.trim(), ambiente: ambiente || null };
+}
+
+/** Os mesmos cálculos de quem cria a OS na tela: data da venda, prazo em dias, entrega limite e responsável. */
+function ajustarOrdem(valores: Record<string, string | number | null>, ref: Registro["ref"], posicao: number) {
+  const nome = String(valores.cliente_nome ?? "");
+  const { cliente, ambiente } = separarCliente(nome);
+  ref.pessoa = cliente;
+  valores.ambiente = ambiente;
+  valores.descricao = nome || "Ordem de serviço";
+  valores.ordem = posicao;
+  if ("data_venda" in valores) {
+    const bruto = String(valores.data_venda ?? "");
+    const iso = bruto ? dataDoTexto(bruto) : null;
+    valores.data_venda = iso;
+    valores.data_venda_obs = iso ? null : bruto || null;
+  }
+  if ("prazo_texto" in valores) {
+    const t = String(valores.prazo_texto ?? "");
+    const limite = dataDoTexto(t);
+    const dias = limite ? null : Number(t.match(/\d+/)?.[0] ?? NaN);
+    valores.prazo_limite = limite;
+    valores.prazo_dias = dias && Number.isFinite(dias) && dias > 0 ? dias : null;
+  }
+  const venda = typeof valores.data_venda === "string" ? valores.data_venda : null;
+  valores.prazo = (valores.prazo_limite as string | null) ?? (venda && valores.prazo_dias ? somarDias(venda, Number(valores.prazo_dias)) : null);
+  const fab = valores.resp_fabricacao && valores.resp_fabricacao !== "-" ? valores.resp_fabricacao : null;
+  valores.responsavel = fab ?? valores.resp_detalhamento ?? null;
+  if (valores.status_pcp === "FIN" && !valores.posicao) valores.posicao = "FINALIZADO";
 }

@@ -19,11 +19,20 @@ export async function mudarStatusPedido(id: string, form: FormData) {
 
 export async function criarOrdem(pedidoId: string, form: FormData) {
   const supabase = await createClient();
+  const { data: pedido } = await supabase.from("pedidos").select("cliente_id, criado_em, clientes(nome, telefone, endereco)").eq("id", pedidoId).maybeSingle();
+  const cliente = pedido?.clientes as unknown as { nome: string; telefone: string | null; endereco: string | null } | null;
   const { error } = await supabase.from("ordens_producao").insert({
     pedido_id: pedidoId,
+    cliente_id: pedido?.cliente_id ?? null,
+    cliente_nome: cliente?.nome ?? null,
+    telefone: cliente?.telefone ?? null,
+    endereco: cliente?.endereco ?? null,
+    data_venda: pedido?.criado_em ? String(pedido.criado_em).slice(0, 10) : null,
+    posicao: "AGUARDANDO",
     descricao: texto(form, "descricao") ?? "Produção do pedido",
     responsavel: texto(form, "responsavel"),
     prazo: texto(form, "prazo"),
+    prazo_limite: texto(form, "prazo"),
   });
   if (error) throw new Error(error.message);
   await supabase.from("pedidos").update({ status: "em_producao" }).eq("id", pedidoId).eq("status", "aberto");
