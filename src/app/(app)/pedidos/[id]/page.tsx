@@ -6,6 +6,7 @@ import { ROTULOS, ROTULOS2, brl, data, hojeISO, linkWhats, preencher } from "@/l
 import { atualizarMarco, criarOrdem, gerarParcelas, lancarComissoes, mudarStatusPedido } from "../actions";
 import { Previsao } from "../../orcamentos/previsao";
 import { JanelaBotao } from "@/components/janela";
+import { SeloStatus } from "../../producao/componentes";
 
 export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">) {
   const { id } = await params;
@@ -187,12 +188,12 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
         </JanelaBotao>
       </div>
       <div className="mb-8">
-        <Tabela cabecalho={["OP", "Descrição", "Etapa", "Responsável", "Prazo"]} vazio={!ordens?.length}>
+        <Tabela cabecalho={["OS", "Descrição", "Status", "Responsável", "Prazo"]} vazio={!ordens?.length}>
           {ordens?.map((o) => (
             <tr key={o.id}>
-              <td className="px-4 py-3">#{o.numero}</td>
+              <td className="px-4 py-3"><Link href={`/producao/${o.id}`} className="text-madeira-800 hover:underline">{o.os ? `OS ${o.os}` : `#${o.numero}`}</Link></td>
               <td className="px-4 py-3">{o.descricao}</td>
-              <td className="px-4 py-3"><Selo cor="amber">{ROTULOS.etapa[o.etapa as keyof typeof ROTULOS.etapa]}</Selo></td>
+              <td className="px-4 py-3"><SeloStatus sigla={o.status_pcp} nome /></td>
               <td className="px-4 py-3">{o.responsavel ?? "—"}</td>
               <td className="px-4 py-3">{data(o.prazo)}</td>
             </tr>
