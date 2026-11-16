@@ -88,6 +88,7 @@ export const NAVEGACAO: Secao[] = [
   {
     titulo: "Sistema",
     abas: [
+      { rotulo: "Importar arquivos", icone: "importar", href: "/importar" },
       { rotulo: "Equipe e parceiros", icone: "equipe", href: "/equipe" },
       { rotulo: "Configurações", icone: "configuracoes", href: "/configuracoes" },
     ],

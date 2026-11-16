@@ -6,6 +6,7 @@ import { Botao, Erro, inputCls } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { AREAS, acharCabecalho, acharLegenda, avaliarAba, converter, mapearColunas, normalizar, type Area } from "@/lib/importacao";
 import { EXT_IA, EXT_PLANILHA, lerPlanilhaArquivo, type Aba } from "@/lib/planilha";
+import { lerDocumento } from "@/lib/documento";
 import { guardarArquivo, importarDados, limparArea, type Resumo } from "@/app/(app)/importar/actions";
 
 type Etapa =
@@ -92,17 +93,14 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
         const melhor = abas.reduce((m, a, i) => (notas[i] > notas[m] || (notas[i] === notas[m] && a.linhas.length > abas[m].linhas.length) ? i : m), 0);
         prepararMapa(abas, melhor);
       } else if (EXT_IA.test(f.name)) {
-        if (!caminho) throw new Error("Não consegui enviar o arquivo. Tente de novo.");
-        setEtapa({ tipo: "lendo", texto: "Lendo o documento e organizando os dados… isso pode levar até um minuto." });
-        const r = await fetch("/api/importar/ler", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ caminho, area }) });
-        const dados = await r.json().catch(() => ({ erro: "Falha na leitura." }));
-        if (!r.ok) {
-          await guardarArquivo(area, f.name, caminho, info.tipo);
-          setEtapa({ tipo: "guardado", texto: dados.erro ?? "Não deu para ler o arquivo, mas ele ficou guardado." });
+        setEtapa({ tipo: "lendo", texto: "Lendo o documento…" });
+        const doc = await lerDocumento(f, (texto) => setEtapa({ tipo: "lendo", texto }));
+        if (!doc.linhas.length) {
+          if (caminho) await guardarArquivo(area, f.name, caminho, info.tipo);
+          setEtapa({ tipo: "guardado", texto: "Não encontrei texto nesse arquivo. Ele ficou guardado como referência em Importar arquivos." });
           return;
         }
-        const linhas = [dados.cabecalho as string[], ...(dados.linhas as string[][])];
-        prepararMapa([{ nome: f.name, linhas }], 0, 0, dados.observacao);
+        prepararMapa([{ nome: f.name, linhas: doc.linhas }], 0, undefined, doc.observacao);
       } else {
         if (!caminho) throw new Error("Não consegui enviar o arquivo. Tente de novo.");
         const e = await guardarArquivo(area, f.name, caminho, info.tipo);
@@ -178,7 +176,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violeta to-ciano text-white"><IconeUpload /></span>
                 <span className="font-medium text-stone-800">Arraste o arquivo aqui ou clique para escolher</span>
-                <span className="text-xs text-stone-500">Planilhas Excel (.xlsx ou .xls) e CSV são lidas na hora. PDFs e fotos de documentos são lidos automaticamente. Outros arquivos ficam guardados como referência.</span>
+                <span className="text-xs text-stone-500">Planilhas Excel (.xlsx ou .xls) e CSV são lidas na hora. PDFs e fotos de documentos são lidos aqui mesmo, no seu computador. Outros arquivos ficam guardados como referência.</span>
               </button>
               <input ref={entrada} type="file" className="hidden" onChange={(e) => { receber(e.target.files?.[0]); e.target.value = ""; }} />
               <div className="mt-3"><Erro mensagem={erro} /></div>
@@ -282,7 +280,7 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
                       {resultado.registros.slice(0, 50).map((r, i) => (
                         <tr key={i}>
                           {camposUsados.map((f) => {
-                            const v = f.chave === "pedido" ? r.ref.pedido : f.chave === "pessoa" ? r.ref.pessoa : f.chave === "codigo" && area === "producao" ? r.chave.replace(/^cod:/, "") : r.valores[f.chave];
+                            const v = f.chave === "pedido" ? r.ref.pedido : f.chave === "pessoa" ? r.ref.pessoa : f.chave === "situacao" ? (r.valores.pago_em ? "pago" : "aberto") : f.chave === "codigo" && area === "producao" ? r.chave.replace(/^cod:/, "") : r.valores[f.chave];
                             const texto = v == null || v === "" ? "—" : f.tipo === "data" ? String(v).split("-").reverse().join("/") : f.tipo === "numero" ? Number(v).toLocaleString("pt-BR") : String(v).replace("_", " ");
                             return <td key={f.chave} className="max-w-48 truncate px-3 py-1.5">{texto}</td>;
                           })}
