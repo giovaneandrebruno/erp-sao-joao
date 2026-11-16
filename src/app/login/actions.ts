@@ -11,7 +11,7 @@ export async function entrar(_: string | null, form: FormData) {
   });
   if (error) return "E-mail ou senha incorretos.";
   const { data: perfil } = await supabase.from("perfis").select("papel").eq("user_id", data.user.id).maybeSingle();
-  redirect(perfil?.papel === "montador" ? "/campo" : "/");
+  redirect(perfil?.papel === "montador" ? "/conta" : "/");
 }
 
 export async function sair() {

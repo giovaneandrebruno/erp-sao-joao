@@ -5,7 +5,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "campo" | "importar";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -46,7 +46,6 @@ export const NAVEGACAO: Secao[] = [
         filhos: [
           { href: "/producao", rotulo: "Ordens de produção" },
           { href: "/assistencia", rotulo: "Assistência técnica" },
-          { href: "/campo", rotulo: "App do montador" },
         ],
       },
       {
