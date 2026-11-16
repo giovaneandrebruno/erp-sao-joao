@@ -181,18 +181,6 @@ export async function importarDados(entrada: {
   }
 }
 
-/** Guarda só o arquivo (quando não há dados para ler, ou a leitura automática não está ligada). */
-export async function guardarArquivo(area: Area, arquivoNome: string, arquivoCaminho: string, arquivoTipo: string | null) {
-  const semPermissao = await podeImportar(area);
-  if (semPermissao) return semPermissao;
-  const supabase = await createClient();
-  const { error } = await supabase.from("importacoes").insert({ area, arquivo_nome: arquivoNome.slice(0, 200), arquivo_caminho: arquivoCaminho, arquivo_tipo: arquivoTipo, modo: "arquivo" });
-  if (error) return error.message;
-  revalidatePath("/importar");
-  return null;
-}
-
-/** Apaga tudo o que veio de arquivos nesta área. Pede a senha de quem está logado. */
 export async function limparArea(area: Area, senha: string): Promise<{ erro: string } | { removidos: number; mantidos: number }> {
   const semPermissao = await podeImportar(area);
   if (semPermissao) return { erro: semPermissao };

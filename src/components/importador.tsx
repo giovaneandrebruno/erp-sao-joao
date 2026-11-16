@@ -5,15 +5,13 @@ import { useRouter } from "next/navigation";
 import { Botao, Erro, inputCls } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { AREAS, acharCabecalho, acharLegenda, avaliarAba, converter, mapearColunas, normalizar, type Area } from "@/lib/importacao";
-import { EXT_IA, EXT_PLANILHA, lerPlanilhaArquivo, type Aba } from "@/lib/planilha";
-import { lerDocumento } from "@/lib/documento";
-import { guardarArquivo, importarDados, limparArea, type Resumo } from "@/app/(app)/importar/actions";
+import { AVISO_FORMATO, EXT_PLANILHA, lerPlanilhaArquivo, type Aba } from "@/lib/planilha";
+import { importarDados, limparArea, type Resumo } from "@/app/(app)/importar/actions";
 
 type Etapa =
   | { tipo: "escolher" }
   | { tipo: "lendo"; texto: string }
   | { tipo: "mapear"; abas: Aba[]; aba: number; linhaCab: number; mapa: (string | null)[]; observacao?: string }
-  | { tipo: "guardado"; texto: string }
   | { tipo: "pronto"; resumo: Resumo };
 
 type Arquivo = { nome: string; caminho: string | null; tipo: string | null };
@@ -78,37 +76,21 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
   async function receber(f: File | undefined) {
     if (!f) return;
     setErro(null);
+    if (!EXT_PLANILHA.test(f.name)) { setErro(AVISO_FORMATO); return; }
     if (f.size > 50 * 1024 * 1024) { setErro("O arquivo passa de 50 MB."); return; }
-    setEtapa({ tipo: "lendo", texto: "Enviando o arquivo…" });
-    const caminho = await enviarAoStorage(f);
-    const info: Arquivo = { nome: f.name, caminho, tipo: f.type || f.name.split(".").pop() || null };
-    setArquivo(info);
     try {
-      if (EXT_PLANILHA.test(f.name) || /\.xls$/i.test(f.name)) {
-        setEtapa({ tipo: "lendo", texto: "Lendo a planilha…" });
-        const abas = (await lerPlanilhaArquivo(f)).filter((a) => a.linhas.length);
-        if (!abas.length) throw new Error("A planilha está vazia.");
-        // a aba que mais parece com o que esta área espera; no empate, a com mais linhas
-        const notas = abas.map((a) => avaliarAba(area, a.linhas).nota);
-        const melhor = abas.reduce((m, a, i) => (notas[i] > notas[m] || (notas[i] === notas[m] && a.linhas.length > abas[m].linhas.length) ? i : m), 0);
-        prepararMapa(abas, melhor);
-      } else if (EXT_IA.test(f.name)) {
-        setEtapa({ tipo: "lendo", texto: "Lendo o documento…" });
-        const doc = await lerDocumento(f, (texto) => setEtapa({ tipo: "lendo", texto }));
-        if (!doc.linhas.length) {
-          if (caminho) await guardarArquivo(area, f.name, caminho, info.tipo);
-          setEtapa({ tipo: "guardado", texto: "Não encontrei texto nesse arquivo. Ele ficou guardado como referência em Importar arquivos." });
-          return;
-        }
-        prepararMapa([{ nome: f.name, linhas: doc.linhas }], 0, undefined, doc.observacao);
-      } else {
-        if (!caminho) throw new Error("Não consegui enviar o arquivo. Tente de novo.");
-        const e = await guardarArquivo(area, f.name, caminho, info.tipo);
-        if (e) throw new Error(e);
-        setEtapa({ tipo: "guardado", texto: "Esse tipo de arquivo não tem dados para ler, então ele ficou guardado como referência em Importar arquivos." });
-      }
+      setEtapa({ tipo: "lendo", texto: "Lendo a planilha…" });
+      const abas = (await lerPlanilhaArquivo(f)).filter((a) => a.linhas.length);
+      if (!abas.length) throw new Error("A planilha está vazia.");
+      // guarda o original para o histórico (se falhar, a importação segue normalmente)
+      const caminho = await enviarAoStorage(f);
+      setArquivo({ nome: f.name, caminho, tipo: "xlsx" });
+      // a aba que mais parece com o que esta área espera; no empate, a com mais linhas
+      const notas = abas.map((a) => avaliarAba(area, a.linhas).nota);
+      const melhor = abas.reduce((m, a, i) => (notas[i] > notas[m] || (notas[i] === notas[m] && a.linhas.length > abas[m].linhas.length) ? i : m), 0);
+      prepararMapa(abas, melhor);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não consegui ler o arquivo.");
+      setErro(e instanceof Error ? e.message : "Não consegui ler a planilha.");
       setEtapa({ tipo: "escolher" });
     }
   }
@@ -175,10 +157,10 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
                 className={`flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${arrastando ? "border-violeta bg-violeta/5" : "border-stone-200 hover:border-violeta/50 hover:bg-stone-50"}`}
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violeta to-ciano text-white"><IconeUpload /></span>
-                <span className="font-medium text-stone-800">Arraste o arquivo aqui ou clique para escolher</span>
-                <span className="text-xs text-stone-500">Planilhas Excel (.xlsx ou .xls) e CSV são lidas na hora. PDFs e fotos de documentos são lidos aqui mesmo, no seu computador. Outros arquivos ficam guardados como referência.</span>
+                <span className="font-medium text-stone-800">Arraste a planilha aqui ou clique para escolher</span>
+                <span className="text-xs text-stone-500">Planilha do Excel em .xlsx. Você confere a prévia antes de gravar qualquer coisa.</span>
               </button>
-              <input ref={entrada} type="file" className="hidden" onChange={(e) => { receber(e.target.files?.[0]); e.target.value = ""; }} />
+              <input ref={entrada} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => { receber(e.target.files?.[0]); e.target.value = ""; }} />
               <div className="mt-3"><Erro mensagem={erro} /></div>
             </>
           )}
@@ -187,16 +169,6 @@ export function Importador({ area, rotulo = "Importar arquivo" }: { area: Area; 
             <div className="flex items-center gap-3 rounded-xl bg-stone-50 p-6 text-sm text-stone-600">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-violeta border-t-transparent" /> {etapa.texto}
             </div>
-          )}
-
-          {etapa.tipo === "guardado" && (
-            <>
-              <p className="rounded-xl bg-ciano/10 p-4 text-sm text-stone-700 ring-1 ring-ciano/30">{etapa.texto}</p>
-              <div className="mt-4 flex justify-end gap-2">
-                <Botao type="button" variante="secundario" onClick={() => setEtapa({ tipo: "escolher" })}>Enviar outro</Botao>
-                <Botao type="button" onClick={fechar}>Fechar</Botao>
-              </div>
-            </>
           )}
 
           {etapa.tipo === "pronto" && (
