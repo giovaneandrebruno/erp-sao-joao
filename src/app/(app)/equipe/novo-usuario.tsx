@@ -8,7 +8,7 @@ import { criarUsuario } from "./actions";
 export function NovoUsuario({ parceiros }: { parceiros: { id: string; nome: string }[] }) {
   const [msg, acao, enviando] = useActionState(criarUsuario, null);
   return (
-    <form action={acao} className="grid gap-3 md:grid-cols-6">
+    <form action={acao} data-manter-aberta className="grid gap-3 md:grid-cols-6">
       <Campo rotulo="Nome" className="md:col-span-2"><input name="nome" className={inputCls} /></Campo>
       <Campo rotulo="E-mail *" className="md:col-span-2"><input name="email" type="email" required className={inputCls} /></Campo>
       <Campo rotulo="Senha inicial *" className="md:col-span-2"><input name="senha" type="text" minLength={8} required placeholder="mínimo 8 caracteres" className={inputCls} /></Campo>

@@ -106,7 +106,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
             <option value="">Toda a equipe</option>
             {pessoas?.map((p) => <option key={p.id} value={p.id}>{p.nome} ({ROTULOS2.tipoParceiro[p.tipo as keyof typeof ROTULOS2.tipoParceiro].toLowerCase()})</option>)}
           </select>
-          <button className="rounded-full bg-gradient-to-r from-violeta to-ciano px-4 py-1.5 text-sm font-semibold text-white">Filtrar</button>
+          <button className="rounded-full bg-marinho px-4 py-1.5 text-sm font-semibold text-white">Filtrar</button>
         </form>
       </div>
 
@@ -126,7 +126,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
             return (
               <div key={i} className={`min-h-28 border-b border-r border-stone-100 p-1.5 ${dia ? "" : "bg-stone-50/60"} ${(i + 1) % 7 === 0 ? "border-r-0" : ""}`}>
                 {dia && (
-                  <div className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs ${dia === hoje ? "bg-gradient-to-br from-violeta to-ciano font-semibold text-white" : "text-stone-500"}`}>
+                  <div className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs ${dia === hoje ? "bg-marinho font-semibold text-white" : "text-stone-500"}`}>
                     {Number(dia.slice(8))}
                   </div>
                 )}
