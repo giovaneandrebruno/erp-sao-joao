@@ -1,60 +1,239 @@
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Titulo } from "@/components/ui";
-import { ETAPAS, ROTULOS, data, hojeISO } from "@/lib/format";
-import { moverEtapa } from "./actions";
+import { BotaoLink, Cartao, Indicador, Titulo, inputCls } from "@/components/ui";
+import { hojeISO } from "@/lib/format";
+import { CAMPOS, GRUPOS, STATUS_PCP, progresso, situacaoPrazo, statusPcp, vizinho, type Ordem } from "@/lib/pcp";
+import { Legenda, PrazoSelo, SeloStatus, ValorMarco } from "./componentes";
+import { moverStatus } from "./actions";
+
+type Busca = Record<string, string | string[] | undefined>;
+const um = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
+
+function montarHref(atual: Busca, muda: Record<string, string | undefined>) {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries({ ...atual, ...muda })) if (typeof v === "string" && v) p.set(k, v);
+  const s = p.toString();
+  return s ? `/producao?${s}` : "/producao";
+}
 
 export default async function ProducaoPage({ searchParams }: PageProps<"/producao">) {
-  const { concluidas } = await searchParams;
+  const sp = (await searchParams) as Busca;
+  const ver = um(sp.ver) || "quadro";
+  const termo = um(sp.busca).trim();
+  const filtroStatus = um(sp.status);
+  const filtroPessoa = um(sp.pessoa);
+  const filtroPrazo = um(sp.prazo);
+
   const supabase = await createClient();
-  let consulta = supabase
+  const { data } = await supabase
     .from("ordens_producao")
-    .select("id, numero, descricao, etapa, responsavel, prazo, pedido_id, pedidos(numero, clientes(nome))")
-    .order("prazo", { ascending: true, nullsFirst: false });
-  if (!concluidas) consulta = consulta.neq("etapa", "concluido");
-  const { data: ordens } = await consulta;
+    .select("*")
+    .order("ordem", { ascending: true, nullsFirst: false })
+    .order("numero", { ascending: true });
+  const todas = (data ?? []) as Ordem[];
   const hoje = hojeISO();
-  const colunas = concluidas ? ETAPAS : ETAPAS.filter((e) => e !== "concluido");
+
+  const ativas = todas.filter((o) => o.status_pcp !== "FIN");
+  const atrasadas = ativas.filter((o) => situacaoPrazo(o, hoje).tipo === "atrasada");
+  const proximas = ativas.filter((o) => situacaoPrazo(o, hoje).tipo === "proxima");
+  const comPendencia = ativas.filter((o) => o.status_pcp === "IP" || o.status_pcp === "PP" || (o.pendencias && String(o.pendencias).toUpperCase().includes("PENDENTE")));
+
+  const pessoas = [...new Set(todas.flatMap((o) => [o.consultor, o.resp_detalhamento, o.resp_fabricacao, o.montador])
+    .flatMap((p) => String(p ?? "").split(/\s*[+/]\s*/))
+    .map((p) => p.trim().toUpperCase())
+    .filter((p) => p && p !== "-"))].sort();
+
+  let lista = ver === "concluidos" ? todas.filter((o) => o.status_pcp === "FIN") : ver === "planilha" ? todas : ativas;
+  if (termo) {
+    const t = termo.toLowerCase();
+    lista = lista.filter((o) => [o.os, o.cliente_nome, o.ambiente, o.endereco, o.pendencias].some((x) => String(x ?? "").toLowerCase().includes(t)));
+  }
+  if (filtroStatus) lista = lista.filter((o) => o.status_pcp === filtroStatus);
+  if (filtroPessoa) lista = lista.filter((o) => [o.consultor, o.resp_detalhamento, o.resp_fabricacao, o.montador, o.arquiteto].some((x) => String(x ?? "").toUpperCase().includes(filtroPessoa)));
+  if (filtroPrazo) lista = lista.filter((o) => situacaoPrazo(o, hoje).tipo === filtroPrazo);
+
+  const contagem: Record<string, number> = {};
+  const base = ver === "concluidos" ? todas.filter((o) => o.status_pcp === "FIN") : ver === "planilha" ? todas : ativas;
+  for (const s of STATUS_PCP) {
+    const n = base.filter((o) => o.status_pcp === s.sigla).length;
+    if (n) contagem[s.sigla] = n;
+  }
+
+  const abas = [
+    { chave: "quadro", rotulo: "Quadro por etapa", n: ativas.length },
+    { chave: "planilha", rotulo: "Planilha completa", n: todas.length },
+    { chave: "concluidos", rotulo: "Concluídos", n: todas.length - ativas.length },
+  ];
 
   return (
     <>
-      <Titulo acao={<Link href={concluidas ? "/producao" : "/producao?concluidas=1"} className="text-sm text-madeira-800 hover:underline">{concluidas ? "Ocultar concluídas" : "Mostrar concluídas"}</Link>}>
+      <Titulo
+        sub="Controle de produção no formato da planilha de PCP: legenda de status, colunas Comercial, Administrativo e Operacional e prazo de entrega calculado."
+        acao={
+          <div className="flex flex-wrap gap-2">
+            <a href="/producao/exportar" download className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50">Baixar planilha</a>
+            <BotaoLink href="/producao/nova">Nova OS</BotaoLink>
+          </div>
+        }
+      >
         Produção
       </Titulo>
-      <p className="mb-4 text-sm text-stone-500">Crie ordens de produção dentro de cada pedido. Use as setas para mudar a etapa.</p>
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {colunas.map((etapa) => {
-          const daEtapa = ordens?.filter((o) => o.etapa === etapa) ?? [];
-          return (
-            <div key={etapa} className="min-w-40 flex-1 rounded-lg bg-stone-200/60 p-2">
-              <div className="mb-2 px-1 text-sm font-semibold text-stone-600">{ROTULOS.etapa[etapa]} <span className="text-stone-400">({daEtapa.length})</span></div>
-              <div className="flex flex-col gap-2">
-                {daEtapa.map((o) => {
-                  const pedido = o.pedidos as unknown as { numero: number; clientes: { nome: string } | null } | null;
-                  const atrasada = o.prazo && o.prazo < hoje;
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Link href={montarHref({}, { ver: "quadro" })}><Indicador rotulo="Em andamento" valor={ativas.length} sub={`${todas.length} ordens no total`} /></Link>
+        <Link href={montarHref({}, { ver: "quadro", prazo: "atrasada" })}><Indicador rotulo="Atrasadas" valor={atrasadas.length} cor={atrasadas.length ? "vermelho" : undefined} sub="Passaram da entrega limite" /></Link>
+        <Link href={montarHref({}, { ver: "quadro", prazo: "proxima" })}><Indicador rotulo="Vencem em 7 dias" valor={proximas.length} sub="Entregas da semana" /></Link>
+        <Link href={montarHref({}, { ver: "quadro", status: "IP" })}><Indicador rotulo="Pendências" valor={comPendencia.length} sub="Itens pendentes ou parados" /></Link>
+        <Link href={montarHref({}, { ver: "concluidos" })}><Indicador rotulo="Concluídas" valor={todas.length - ativas.length} cor="verde" sub="Status FIN" /></Link>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-stone-200">
+        {abas.map((a) => (
+          <Link
+            key={a.chave}
+            href={montarHref({}, { ver: a.chave === "quadro" ? undefined : a.chave })}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${ver === a.chave ? "border-azul text-stone-900" : "border-transparent text-stone-500 hover:text-stone-800"}`}
+          >
+            {a.rotulo} <span className="ml-1 rounded bg-stone-100 px-1.5 font-mono text-[11px] text-stone-500">{a.n}</span>
+          </Link>
+        ))}
+      </div>
+
+      <form className="mb-4 flex flex-wrap items-center gap-2">
+        {ver !== "quadro" && <input type="hidden" name="ver" value={ver} />}
+        {filtroStatus && <input type="hidden" name="status" value={filtroStatus} />}
+        <input name="busca" defaultValue={termo} placeholder="Buscar cliente, OS, ambiente, endereço…" className={`${inputCls} w-full max-w-xs`} />
+        <select name="pessoa" defaultValue={filtroPessoa} className={inputCls}>
+          <option value="">Todas as pessoas</option>
+          {pessoas.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select name="prazo" defaultValue={filtroPrazo} className={inputCls}>
+          <option value="">Qualquer prazo</option>
+          <option value="atrasada">Atrasadas</option>
+          <option value="proxima">Vencem em 7 dias</option>
+          <option value="no_prazo">No prazo</option>
+          <option value="sem_prazo">Sem prazo definido</option>
+        </select>
+        <button className="rounded-lg bg-marinho px-3 py-2 text-sm font-semibold text-white hover:bg-marinho-claro">Filtrar</button>
+        {(termo || filtroPessoa || filtroPrazo || filtroStatus) && <Link href={montarHref({}, { ver: ver === "quadro" ? undefined : ver })} className="text-sm text-madeira-700 hover:underline">Limpar filtros</Link>}
+      </form>
+
+      <div className="mb-5">
+        <Legenda contagem={contagem} ativo={filtroStatus || undefined} href={(s) => montarHref(sp, { status: s })} />
+      </div>
+
+      {ver === "quadro" ? <Quadro ordens={lista} hoje={hoje} filtrado={!!filtroStatus} /> : <PlanilhaOs ordens={lista} hoje={hoje} />}
+    </>
+  );
+}
+
+function Quadro({ ordens, hoje, filtrado }: { ordens: Ordem[]; hoje: string; filtrado: boolean }) {
+  const colunas = STATUS_PCP.filter((s) => s.sigla !== "FIN").filter((s) => !filtrado || ordens.some((o) => o.status_pcp === s.sigla));
+  if (!ordens.length) return <Cartao><p className="text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p></Cartao>;
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-4">
+      {colunas.map((s) => {
+        const daEtapa = ordens.filter((o) => o.status_pcp === s.sigla);
+        const vazia = daEtapa.length === 0;
+        return (
+          <div key={s.sigla} className={`shrink-0 rounded-xl bg-stone-200/50 p-2 ${vazia ? "w-28" : "w-72"}`}>
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <SeloStatus sigla={s.sigla} />
+              <span className={`text-xs font-semibold text-stone-600 ${vazia ? "truncate" : ""}`} title={s.nome}>{s.nome}</span>
+              <span className="ml-auto text-xs text-stone-400">{daEtapa.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {daEtapa.map((o) => <CartaoOs key={o.id} o={o} hoje={hoje} />)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CartaoOs({ o, hoje }: { o: Ordem; hoje: string }) {
+  const s = statusPcp(o.status_pcp);
+  const prog = progresso(o, hoje);
+  const ant = vizinho(o.status_pcp, -1);
+  const prox = vizinho(o.status_pcp, 1);
+  return (
+    <div className="rounded-lg border border-stone-200 border-l-4 bg-white p-3 text-sm shadow-[0_1px_2px_rgb(20_20_43/0.04)] transition hover:shadow-[0_8px_20px_-12px_rgb(15_29_51/0.35)]" style={{ borderLeftColor: s.cor }}>
+      <Link href={`/producao/${o.id}`} className="block">
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-semibold leading-snug text-stone-900">{o.cliente_nome}</span>
+          {o.os && <span className="shrink-0 rounded bg-stone-100 px-1.5 font-mono text-[11px] text-stone-600">OS {o.os}</span>}
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-stone-500">
+          {o.posicao && <span className="font-medium text-stone-700">{o.posicao}</span>}
+          {o.consultor && <span>Consultor: {o.consultor}</span>}
+          {o.responsavel && <span>Resp.: {o.responsavel}</span>}
+        </div>
+        <div className="mt-2"><PrazoSelo ordem={o} hoje={hoje} /></div>
+        {o.pendencias && <p className="mt-2 line-clamp-2 text-xs text-rosa">{o.pendencias}</p>}
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-stone-100" title={`${prog.feitos} de ${prog.total} etapas concluídas`}>
+          <div className="h-full bg-neon" style={{ width: `${(prog.feitos / prog.total) * 100}%` }} />
+        </div>
+      </Link>
+      <div className="mt-2 flex items-center justify-between text-xs">
+        <form action={moverStatus.bind(null, o.id, -1)}><button disabled={!ant} title={ant ? `Voltar para ${ant}` : ""} className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30">← {ant ?? ""}</button></form>
+        <form action={moverStatus.bind(null, o.id, 1)}><button disabled={!prox} title={prox ? `Avançar para ${prox}` : ""} className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30">{prox ?? ""} →</button></form>
+      </div>
+    </div>
+  );
+}
+
+const COR_GRUPO: Record<string, string> = { Comercial: "bg-[#fde7d3]", Administrativo: "bg-[#e3ecfb]", Operacional: "bg-[#dff3ea]" };
+
+/** A planilha inteira, com as mesmas colunas e a linha pintada pela cor do status. */
+function PlanilhaOs({ ordens, hoje }: { ordens: Ordem[]; hoje: string }) {
+  const cols = CAMPOS;
+  const qtdPorGrupo = GRUPOS.map((g) => ({ g, n: cols.filter((c) => c.grupo === g).length + (g === "Comercial" ? 1 : 0) }));
+  return (
+    <div className="vidro max-h-[70vh] overflow-auto rounded-2xl">
+      <table className="w-max min-w-full border-separate border-spacing-0 text-left text-xs">
+        <thead className="sticky top-0 z-20">
+          <tr>
+            {qtdPorGrupo.map(({ g, n }) => (
+              <th key={g} colSpan={n} className={`${COR_GRUPO[g]} border-b border-stone-200 px-3 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-stone-600`}>{g}</th>
+            ))}
+          </tr>
+          <tr className="bg-stone-50">
+            {cols.map((c, i) => (
+              <Fragment key={c.chave}>
+                <th className={`border-b border-stone-200 bg-stone-50 px-3 py-2 align-bottom text-[10px] font-semibold uppercase leading-tight tracking-wide text-stone-500 ${i < 2 ? "sticky z-10" : ""} ${i === 0 ? "left-0 min-w-20" : i === 1 ? "left-20 min-w-56" : "min-w-24 max-w-40"}`}>{c.rotulo}</th>
+                {c.chave === "prazo_texto" && <th className="border-b border-stone-200 bg-stone-50 px-3 py-2 align-bottom text-[10px] font-semibold uppercase tracking-wide text-azul">Entrega limite</th>}
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {ordens.map((o) => {
+            const s = statusPcp(o.status_pcp);
+            const fundo = `${s.cor}30`;
+            return (
+              <tr key={o.id} className="group">
+                {cols.map((c, i) => {
+                  const fixo = i < 2 ? `sticky z-10 ${i === 0 ? "left-0" : "left-20"}` : "";
+                  let conteudo: ReactNode;
+                  if (c.chave === "cliente_nome") conteudo = <Link href={`/producao/${o.id}`} className="font-semibold text-stone-900 hover:underline">{o.cliente_nome}</Link>;
+                  else if (c.chave === "status_pcp") conteudo = <SeloStatus sigla={o.status_pcp} />;
+                  else if (c.tipo === "marco" || c.chave === "data_venda") conteudo = <ValorMarco valor={c.chave === "data_venda" ? o.data_venda ?? o.data_venda_obs : o[c.chave]} hoje={hoje} compacto />;
+                  else conteudo = o[c.chave] ? <span className={c.tipo === "longo" ? "line-clamp-2 min-w-48 whitespace-normal" : ""}>{String(o[c.chave])}</span> : <span className="text-stone-300">·</span>;
                   return (
-                    <div key={o.id} className="rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-[0_1px_2px_rgb(20_20_43/0.04)] transition hover:border-violeta/40 hover:shadow-[0_8px_20px_-10px_rgb(108_71_255/0.4)]">
-                      <div className="font-medium">OP #{o.numero} · {o.descricao}</div>
-                      {pedido && (
-                        <Link href={`/pedidos/${o.pedido_id}`} className="block text-xs text-madeira-800 hover:underline">
-                          Pedido #{pedido.numero} · {pedido.clientes?.nome}
-                        </Link>
-                      )}
-                      <div className={`mt-1 text-xs ${atrasada ? "font-semibold text-red-600" : "text-stone-500"}`}>
-                        Prazo {data(o.prazo)}{o.responsavel ? ` · ${o.responsavel}` : ""}
-                      </div>
-                      <div className="mt-2 flex justify-between">
-                        <form action={moverEtapa.bind(null, o.id, -1)}><button disabled={etapa === ETAPAS[0]} className="rounded px-2 text-stone-500 hover:bg-stone-100 disabled:opacity-30">←</button></form>
-                        <form action={moverEtapa.bind(null, o.id, 1)}><button disabled={etapa === "concluido"} className="rounded px-2 text-stone-500 hover:bg-stone-100 disabled:opacity-30">→</button></form>
-                      </div>
-                    </div>
+                    <Fragment key={c.chave}>
+                      <td className={`whitespace-nowrap border-b border-white px-3 py-1.5 ${fixo}`} style={{ background: i < 2 ? `color-mix(in srgb, ${s.cor} 19%, white)` : fundo }}>{conteudo}</td>
+                      {c.chave === "prazo_texto" && <td className="whitespace-nowrap border-b border-white px-3 py-1.5" style={{ background: fundo }}><PrazoSelo ordem={o} hoje={hoje} /></td>}
+                    </Fragment>
                   );
                 })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {!ordens.length && <p className="p-8 text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p>}
+    </div>
   );
 }

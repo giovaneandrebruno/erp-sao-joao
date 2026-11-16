@@ -5,14 +5,16 @@ import { BotaoLink, Cartao, Selo, Tabela, Titulo } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
 import { ROTULOS, brl, data } from "@/lib/format";
 import { FormCliente } from "../form";
+import { SeloStatus } from "../../producao/componentes";
 
 export default async function ClientePage({ params }: PageProps<"/clientes/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: cliente }, { data: orcamentos }, { data: pedidos }] = await Promise.all([
+  const [{ data: cliente }, { data: orcamentos }, { data: pedidos }, { data: ordens }] = await Promise.all([
     supabase.from("clientes").select("*").eq("id", id).maybeSingle(),
     supabase.from("orcamentos_resumo").select("id, numero, status, total, criado_em").eq("cliente_id", id).order("numero", { ascending: false }),
     supabase.from("pedidos_resumo").select("id, numero, status, total, data_entrega_prevista").eq("cliente_id", id).order("numero", { ascending: false }),
+    supabase.from("ordens_producao").select("id, os, cliente_nome, status_pcp, posicao, entrega_limite").eq("cliente_id", id).order("ordem"),
   ]);
   if (!cliente) notFound();
 
@@ -24,6 +26,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
             <JanelaBotao rotulo="Editar cadastro" titulo="Editar cliente" descricao={cliente.nome} variante="secundario" icone={null}>
               <FormCliente cliente={cliente} />
             </JanelaBotao>
+            <BotaoLink href={`/producao/nova?cliente=${id}`} variante="secundario">Nova OS</BotaoLink>
             <BotaoLink href={`/crm/nova?cliente=${id}`} variante="secundario">Nova negociação</BotaoLink>
             <BotaoLink href={`/orcamentos/novo?cliente=${id}`}>Novo orçamento</BotaoLink>
           </div>
@@ -48,6 +51,25 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
           ))}
         </dl>
       </Cartao>
+
+      {!!ordens?.length && (
+        <>
+          <h2 className="mb-3 text-lg font-semibold">Produção (ordens de serviço)</h2>
+          <div className="mb-8">
+            <Tabela cabecalho={["OS", "Descrição", "Status", "Posição", "Entrega limite"]}>
+              {ordens.map((o) => (
+                <tr key={o.id}>
+                  <td className="px-4 py-3 font-mono text-xs">{o.os ?? "—"}</td>
+                  <td className="px-4 py-3"><Link href={`/producao/${o.id}`} className="text-madeira-800 hover:underline">{o.cliente_nome}</Link></td>
+                  <td className="px-4 py-3"><SeloStatus sigla={o.status_pcp} nome /></td>
+                  <td className="px-4 py-3">{o.posicao ?? "—"}</td>
+                  <td className="px-4 py-3">{data(o.entrega_limite)}</td>
+                </tr>
+              ))}
+            </Tabela>
+          </div>
+        </>
+      )}
 
       <h2 className="mb-3 text-lg font-semibold">Orçamentos</h2>
       <div className="mb-8">

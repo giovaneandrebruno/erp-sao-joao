@@ -44,7 +44,9 @@ export const NAVEGACAO: Secao[] = [
         rotulo: "Produção",
         icone: "producao",
         filhos: [
-          { href: "/producao", rotulo: "Ordens de produção" },
+          { href: "/producao", rotulo: "Quadro de produção", dica: "OS por etapa da legenda" },
+          { href: "/producao?ver=planilha", rotulo: "Planilha completa", dica: "Todas as colunas da planilha de PCP" },
+          { href: "/producao?ver=concluidos", rotulo: "Concluídos" },
           { href: "/assistencia", rotulo: "Assistência técnica" },
         ],
       },
@@ -99,6 +101,7 @@ export const ACOES_RAPIDAS: Folha[] = [
   { href: "/clientes/novo", rotulo: "Cadastrar cliente" },
   { href: "/crm/nova", rotulo: "Nova negociação" },
   { href: "/orcamentos/novo", rotulo: "Novo orçamento" },
+  { href: "/producao/nova", rotulo: "Nova ordem de serviço (produção)" },
   { href: "/estoque/novo", rotulo: "Cadastrar produto" },
   { href: "/financeiro?novo=1", rotulo: "Novo lançamento financeiro" },
 ];
