@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
+import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Cartao, Indicador, Titulo, inputCls } from "@/components/ui";
 import { hojeISO } from "@/lib/format";
@@ -72,6 +73,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
         sub="Controle de produção no formato da planilha de PCP: legenda de status, colunas Comercial, Administrativo e Operacional e prazo de entrega calculado."
         acao={
           <div className="flex flex-wrap gap-2">
+            <FerramentasImportacao area="producao" />
             <a href="/producao/exportar" download className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50">Baixar planilha</a>
             <BotaoLink href="/producao/nova">Nova OS</BotaoLink>
           </div>

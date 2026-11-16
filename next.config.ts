@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    // a importação manda a planilha inteira para o servidor de uma vez
+    serverActions: { bodySizeLimit: "20mb" },
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
