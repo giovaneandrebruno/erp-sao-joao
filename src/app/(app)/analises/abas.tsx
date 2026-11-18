@@ -9,7 +9,7 @@ import type { Analise } from "./calculo";
 
 const grade2 = "grid gap-4 lg:grid-cols-2";
 const kpis = "mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4";
-const CINZA = "#9a9eb0";
+const CINZA = "#b8b8b8";
 
 function AvisoPrevisao({ historico, sazonal }: { historico: number; sazonal: boolean }) {
   if (!historico) return <>Previsão aparece com 3 meses de vendas lançadas.</>;

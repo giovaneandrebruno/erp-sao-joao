@@ -14,9 +14,9 @@ export function Titulo({ children, acao, sub }: { children: ReactNode; acao?: Re
 }
 
 const PRIMARIO =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-marinho px-4 py-2 text-sm font-semibold text-white shadow-[0_1px_2px_rgb(15_29_51/0.2)] transition hover:bg-marinho-claro focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-azul/25 disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-marinho px-4 py-2 text-sm font-semibold text-white shadow-[0_1px_2px_rgb(26_26_26/0.2)] transition hover:bg-marinho-claro focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-azul/25 disabled:opacity-50";
 const SECUNDARIO =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-[0_1px_2px_rgb(15_29_51/0.04)] transition hover:border-stone-300 hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-azul/20";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-[0_1px_2px_rgb(26_26_26/0.04)] transition hover:border-stone-300 hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-azul/20";
 export const PERIGO =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-rosa px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110";
 

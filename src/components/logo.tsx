@@ -1,11 +1,11 @@
-/** Marca "São João ERP": as iniciais "SJ" sobre um quadrado azul-marinho. */
+/** Marca "São João ERP": as iniciais "SJ" sobre um quadrado laranja. */
 export function Logo({ tamanho = 34 }: { tamanho?: number }) {
   return (
     <svg width={tamanho} height={tamanho} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
         <linearGradient id="sj-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2f6fe0" />
-          <stop offset="1" stopColor="#173a74" />
+          <stop offset="0" stopColor="#e89a5c" />
+          <stop offset="1" stopColor="#d0712a" />
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="8" fill="url(#sj-g)" />

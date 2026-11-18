@@ -18,8 +18,8 @@ type Arquivo = { nome: string; caminho: string | null; tipo: string | null };
 
 function Janela({ titulo, sub, fechar, children, largo }: { titulo: string; sub?: string; fechar: () => void; children: ReactNode; largo?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#16123a]/40 p-4 backdrop-blur-sm md:p-10" onMouseDown={(e) => { if (e.target === e.currentTarget) fechar(); }}>
-      <div className={`w-full ${largo ? "max-w-5xl" : "max-w-lg"} rounded-2xl bg-white p-6 shadow-[0_30px_80px_-20px_rgb(22_18_58/0.5)]`}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#141414]/40 p-4 backdrop-blur-sm md:p-10" onMouseDown={(e) => { if (e.target === e.currentTarget) fechar(); }}>
+      <div className={`w-full ${largo ? "max-w-5xl" : "max-w-lg"} rounded-2xl bg-white p-6 shadow-[0_30px_80px_-20px_rgb(20_20_20/0.5)]`}>
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-stone-900">{titulo}</h3>

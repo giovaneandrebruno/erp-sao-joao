@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Identidade "São João ERP" (v4): menu lateral azul-marinho, fundo cinza-azulado
- * bem claro, cartões brancos com borda fina e destaques em azul-marinho.
+ * Identidade "São João ERP" (v5, cores do logo): laranja #e37f33, bege #f3d6b0
+ * e cinza neutro (sem puxar para o verde ou azul). Menu lateral cinza escuro,
+ * fundo cinza claro, cartões brancos e textos em cinza bem escuro.
  * Os nomes antigos dos tokens (violeta, ciano, madeira...) foram mantidos
  * para não mexer em todas as telas: só o valor de cada um mudou.
- * A classe .lateral reaplica a escala escura dentro do menu lateral;
+ * A classe .lateral reaplica a escala clara dentro do menu lateral;
  * a classe .papel garante papel branco nos documentos impressos.
  */
 @theme {
@@ -16,41 +17,43 @@
   --radius-2xl: 0.75rem;
   --radius-3xl: 0.875rem;
 
-  --color-fundo: #f3f5f9;
+  --color-fundo: #f3f3f3;
   --color-superficie: #ffffff;
-  --color-grafite: #0f1d33;
-  --color-marinho: #13294b;
-  --color-marinho-claro: #1c3a66;
-  --color-azul: #2563d8;
+  --color-grafite: #1a1a1a;
+  --color-marinho: #e37f33;
+  --color-marinho-claro: #c9681f;
+  --color-azul: #c9681f;
 
-  /* destaque principal (antes violeta) e secundário (antes ciano) */
-  --color-violeta: #1f5fd1;
-  --color-ciano: #4c8df0;
+  /* laranja do logo: forte (antes violeta) e vivo (antes ciano) */
+  --color-violeta: #c9681f;
+  --color-ciano: #e37f33;
+  --color-bege: #f3d6b0;
+  --color-laranja: #e37f33;
   --color-neon: #12935a;
-  --color-rosa: #d9452b;
-  --color-indigo-lateral: #0e1b30;
+  --color-rosa: #c2410c;
+  --color-indigo-lateral: #3d3d3d;
 
-  --color-stone-50: #f7f9fc;
-  --color-stone-100: #eef2f7;
-  --color-stone-200: #e1e7ef;
-  --color-stone-300: #cbd3df;
-  --color-stone-400: #94a0b4;
-  --color-stone-500: #66748c;
-  --color-stone-600: #4b5871;
-  --color-stone-700: #344158;
-  --color-stone-800: #1f2b42;
-  --color-stone-900: #0f1d33;
+  --color-stone-50: #fafafa;
+  --color-stone-100: #f3f3f3;
+  --color-stone-200: #e5e5e5;
+  --color-stone-300: #d4d4d4;
+  --color-stone-400: #737373;
+  --color-stone-500: #3f3f3f;
+  --color-stone-600: #333333;
+  --color-stone-700: #2b2b2b;
+  --color-stone-800: #222222;
+  --color-stone-900: #1a1a1a;
 
-  --color-madeira-50: #eef4ff;
-  --color-madeira-100: #dce8fe;
-  --color-madeira-200: #bcd3fc;
-  --color-madeira-300: #8fb4f7;
-  --color-madeira-400: #5e8fef;
-  --color-madeira-500: #3a72e3;
-  --color-madeira-600: #2860d2;
-  --color-madeira-700: #1f4fb4;
-  --color-madeira-800: #1d4593;
-  --color-madeira-900: #13294b;
+  --color-madeira-50: #fdf6ee;
+  --color-madeira-100: #fbefe2;
+  --color-madeira-200: #f3d6b0;
+  --color-madeira-300: #ecb98a;
+  --color-madeira-400: #e89a5c;
+  --color-madeira-500: #e37f33;
+  --color-madeira-600: #d0712a;
+  --color-madeira-700: #b25d1e;
+  --color-madeira-800: #8f4a18;
+  --color-madeira-900: #5c3010;
 }
 
 html {
@@ -65,7 +68,7 @@ body {
 /* Barras de rolagem finas e discretas, nas cores do sistema */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(15 29 51 / 0.22) transparent;
+  scrollbar-color: rgb(26 26 26 / 0.22) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -75,19 +78,19 @@ body {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgb(15 29 51 / 0.22);
+  background: rgb(26 26 26 / 0.22);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(15 29 51 / 0.38);
+  background-color: rgb(26 26 26 / 0.38);
 }
 *::-webkit-scrollbar-button {
   display: none;
 }
 
-/* No menu lateral escuro, a barra fica clarinha sobre o azul-marinho */
+/* No menu lateral escuro, a barra fica clarinha sobre o cinza escuro */
 .lateral,
 .lateral * {
   scrollbar-color: rgb(255 255 255 / 0.16) transparent;
@@ -106,45 +109,57 @@ td {
 }
 
 @layer components {
-  /* Antes era um gradiente; agora é o azul-marinho da marca. */
+  /* Números de destaque em laranja forte. */
   .texto-gradiente {
-    color: var(--color-marinho);
+    color: var(--color-violeta);
   }
 
   .vidro {
     background: var(--color-superficie);
-    border: 1px solid rgb(15 29 51 / 0.08);
-    box-shadow: 0 1px 2px rgb(15 29 51 / 0.04);
+    border: 1px solid rgb(26 26 26 / 0.08);
+    box-shadow: 0 1px 2px rgb(26 26 26 / 0.04);
   }
 
   .borda-gradiente {
     background: var(--color-superficie);
-    border: 1px solid rgb(15 29 51 / 0.08);
-    box-shadow: 0 1px 2px rgb(15 29 51 / 0.04), 0 12px 32px -20px rgb(19 41 75 / 0.35);
+    border: 1px solid rgb(26 26 26 / 0.08);
+    box-shadow: 0 1px 2px rgb(26 26 26 / 0.04), 0 12px 32px -20px rgb(26 26 26 / 0.35);
   }
 
-  /* Menu lateral azul-marinho */
+  /* Cartão de destaque do painel: degradê do laranja para o bege, como no logo */
+  .cartao-laranja {
+    background: linear-gradient(135deg, #e37f33, #eba567 60%, #f3d6b0);
+    color: #ffffff;
+    box-shadow: 0 12px 32px -20px rgb(227 127 51 / 0.7);
+  }
+
+  /* Cartão branco com filete bege no topo */
+  .filete {
+    border-top: 3px solid var(--color-bege);
+  }
+
+  /* Menu lateral cinza escuro */
   .lateral {
     color-scheme: dark;
     background: var(--color-indigo-lateral);
-    --color-ciano: #6ea6ff;
-    --color-stone-300: #2a3a55;
-    --color-stone-400: #6c7c98;
-    --color-stone-500: #a3b0c6;
-    --color-stone-800: #e6ecf5;
+    --color-ciano: #e37f33;
+    --color-stone-300: #555555;
+    --color-stone-400: #f3d6b0;
+    --color-stone-500: #d4d4d4;
+    --color-stone-800: #f2f2f2;
     --color-stone-900: #ffffff;
   }
 
   /* Janelas sobrepostas: fundo escurecido em volta */
   .janela::backdrop {
-    background: rgb(8 16 30 / 0.55);
+    background: rgb(20 20 20 / 0.55);
     backdrop-filter: blur(2px);
   }
   .janela[open] {
     animation: janela-entra 0.16s ease-out;
   }
   .janela-fundo {
-    background: rgb(8 16 30 / 0.55);
+    background: rgb(20 20 20 / 0.55);
     backdrop-filter: blur(2px);
     animation: fundo-entra 0.16s ease-out;
   }
@@ -194,7 +209,7 @@ body:has(.janela-fundo) {
 
 /* Documentos para o cliente: papel branco */
 .papel {
-  color: #0f1d33;
+  color: #1a1a1a;
   --color-superficie: #ffffff;
 }
 

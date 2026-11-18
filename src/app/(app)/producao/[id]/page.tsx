@@ -181,7 +181,7 @@ function EtapasLinha({ atual }: { atual: string }) {
     <div className="mt-4 flex gap-1 overflow-x-auto">
       {sequencia.map((x, i) => (
         <div key={x.sigla} title={x.nome} className="min-w-14 flex-1">
-          <div className="h-2 rounded-full" style={{ background: pos >= 0 && i <= pos ? x.cor : "#e1e7ef", outline: i === pos ? "2px solid #13294b" : undefined, outlineOffset: 1 }} />
+          <div className="h-2 rounded-full" style={{ background: pos >= 0 && i <= pos ? x.cor : "#e5e5e5", outline: i === pos ? "2px solid #262626" : undefined, outlineOffset: 1 }} />
           <div className={`mt-1 text-center text-[10px] ${i === pos ? "font-bold text-stone-900" : "text-stone-400"}`}>{x.sigla}</div>
         </div>
       ))}
