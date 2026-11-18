@@ -1,22 +1,22 @@
 /**
  * Cores dos gráficos. A ordem das séries é fixa e foi pensada para
  * daltonismo sobre o cartão branco (vizinhas bem diferentes entre si).
- * Uma série sozinha usa sempre a primeira (azul da marca).
+ * Uma série sozinha usa sempre a primeira (laranja da marca).
  * Nunca use estas cores em texto: rótulos e valores ficam na cor de tinta.
  */
-export const SERIE = ["#2563d8", "#d6367a", "#c98a00", "#0f9488", "#e8590c", "#6b4fd8"] as const;
+export const SERIE = ["#e37f33", "#4a4a4a", "#2563d8", "#0f9488", "#c98a00", "#7a5c3a"] as const;
 
 /** Escala ordenada (etapas do funil, faixas): uma só cor, do claro ao escuro. */
-export const ORDINAL = ["#9fc0f7", "#6e9ef0", "#3f7ae3", "#2560c9", "#1c47a0", "#13294b"] as const;
+export const ORDINAL = ["#f3d6b0", "#ecb98a", "#e89a5c", "#e37f33", "#b25d1e", "#5c3010"] as const;
 
 /** Bom / atenção / ruim. Sempre acompanhados de ícone ou texto. */
 export const ESTADO = { bom: "#12935a", atencao: "#e5a000", ruim: "#d9452b" } as const;
 
 export const TINTA = {
-  forte: "#0f1d33",
-  media: "#4b5871",
-  fraca: "#66748c",
-  grade: "#eef2f7",
-  base: "#cbd3df",
+  forte: "#1a1a1a",
+  media: "#333333",
+  fraca: "#3f3f3f",
+  grade: "#f3f3f3",
+  base: "#d4d4d4",
   superficie: "#ffffff",
 } as const;

@@ -7,7 +7,7 @@ import { ROTULOS, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format"
 import { criarLancamento, excluirLancamento, marcarPago } from "./actions";
 import { JanelaBotao } from "@/components/janela";
 
-const SEGMENTOS = "inline-flex rounded-lg border border-stone-200 bg-white p-0.5 shadow-[0_1px_2px_rgb(15_29_51/0.04)]";
+const SEGMENTOS = "inline-flex rounded-lg border border-stone-200 bg-white p-0.5 shadow-[0_1px_2px_rgb(26_26_26/0.04)]";
 const SEG = "rounded-md px-3 py-1 text-stone-500 transition hover:text-stone-900";
 const SEG_ATIVO = "rounded-md bg-marinho px-3 py-1 font-medium text-white";
 

@@ -39,7 +39,7 @@ export function Barra() {
       <button
         type="button"
         onClick={abrirBusca}
-        className="flex w-10 items-center justify-center gap-2.5 rounded-lg border border-stone-200 bg-white py-2 text-sm text-stone-400 shadow-[0_1px_2px_rgb(15_29_51/0.04)] transition hover:border-stone-300 hover:text-stone-600 sm:w-72 sm:justify-start sm:px-3"
+        className="flex w-10 items-center justify-center gap-2.5 rounded-lg border border-stone-200 bg-white py-2 text-sm text-stone-400 shadow-[0_1px_2px_rgb(26_26_26/0.04)] transition hover:border-stone-300 hover:text-stone-600 sm:w-72 sm:justify-start sm:px-3"
       >
         <Icone nome="busca" className="h-4 w-4" />
         <span className="hidden flex-1 text-left sm:block">Pesquisar no sistema</span>

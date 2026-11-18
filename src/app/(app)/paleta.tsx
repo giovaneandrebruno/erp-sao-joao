@@ -116,7 +116,7 @@ export function Paleta({ papel }: { papel: Papel }) {
   let grupoAnterior = "";
   return (
     <div className="janela-fundo fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh] print:hidden" onMouseDown={(e) => { if (e.target === e.currentTarget) fechar(); }}>
-      <div role="dialog" aria-modal="true" aria-label="Pesquisar" className="janela-caixa flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgb(8_16_30/0.6)] ring-1 ring-stone-900/5">
+      <div role="dialog" aria-modal="true" aria-label="Pesquisar" className="janela-caixa flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgb(26_26_26/0.6)] ring-1 ring-stone-900/5">
         <div className="flex items-center gap-3 border-b border-stone-200 px-5 py-4">
           <Icone nome="busca" className="h-5 w-5 text-stone-400" />
           <input

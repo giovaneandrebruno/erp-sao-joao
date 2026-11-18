@@ -182,7 +182,7 @@ export function QuadroArrastavel({ ordens, hoje, concluidas }: { ordens: Ordem[]
 
       {arrasto && sendoArrastada && (
         <div
-          className="pointer-events-none fixed z-50 rotate-2 opacity-95 shadow-[0_20px_40px_-12px_rgb(15_29_51/0.45)]"
+          className="pointer-events-none fixed z-50 rotate-2 opacity-95 shadow-[0_20px_40px_-12px_rgb(26_26_26/0.45)]"
           style={{ left: arrasto.x - arrasto.dx, top: arrasto.y - arrasto.dy, width: arrasto.largura }}
         >
           <CartaoOs o={sendoArrastada} hoje={hoje} />
@@ -221,7 +221,7 @@ function CartaoOs({
     <div
       onPointerDown={aoApertar}
       onContextMenu={(e) => { if (aoApertar) e.preventDefault(); }}
-      className={`rounded-lg border border-stone-200 border-l-4 bg-white p-3 text-sm shadow-[0_1px_2px_rgb(20_20_43/0.04)] transition hover:shadow-[0_8px_20px_-12px_rgb(15_29_51/0.35)] ${aoApertar ? "cursor-grab [-webkit-touch-callout:none]" : ""} ${fantasma ? "opacity-30" : ""}`}
+      className={`rounded-lg border border-stone-200 border-l-4 bg-white p-3 text-sm shadow-[0_1px_2px_rgb(26_26_26/0.04)] transition hover:shadow-[0_8px_20px_-12px_rgb(26_26_26/0.35)] ${aoApertar ? "cursor-grab [-webkit-touch-callout:none]" : ""} ${fantasma ? "opacity-30" : ""}`}
       style={{ borderLeftColor: s.cor }}
     >
       <Link href={`/producao/${o.id}`} onClick={aoClicar} draggable={false} className="block select-none">

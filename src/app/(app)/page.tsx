@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Cartao, Titulo } from "@/components/ui";
 import { ROTULOS, brl, data, hojeISO, pct } from "@/lib/format";
 import { perfilAtual } from "@/lib/perfil";
+import { situacaoPrazo } from "@/lib/pcp";
+import { Icone, type NomeDoIcone } from "@/components/icones";
 
 export default async function PainelPage() {
   const supabase = await createClient();
@@ -11,7 +13,7 @@ export default async function PainelPage() {
   const inicioMes = `${hoje.slice(0, 7)}-01`;
   const daqui7 = hojeISO(7);
 
-  const [vendasMes, negociacoes, pedidosAtivos, marcosAtrasados, vencidos, semana, produtos, chamados, orcAbertos, agendaSemana] = await Promise.all([
+  const [vendasMes, negociacoes, pedidosAtivos, marcosAtrasados, vencidos, semana, produtos, chamados, orcAbertos, agendaSemana, vendasSemana, ordens, agendaHoje] = await Promise.all([
     supabase.from("pedidos_resumo").select("total, lucro").gte("criado_em", inicioMes).neq("status", "cancelado"),
     supabase.from("negociacoes").select("id, titulo, valor_estimado, proxima_acao, proxima_acao_data, clientes(nome)").not("etapa", "in", "(ganho,perdido)").order("proxima_acao_data", { nullsFirst: false }),
     supabase.from("pedidos_resumo").select("id, numero, cliente_nome, status, data_entrega_prevista").in("status", ["aberto", "em_producao", "pronto"]).order("data_entrega_prevista", { nullsFirst: false }),
@@ -22,6 +24,9 @@ export default async function PainelPage() {
     supabase.from("chamados").select("id", { count: "exact", head: true }).neq("status", "resolvido"),
     supabase.from("orcamentos_resumo").select("total").eq("status", "enviado"),
     supabase.from("pedido_marcos").select("id", { count: "exact", head: true }).is("realizado", null).in("tipo", ["medicao", "entrega", "montagem", "vistoria"]).gte("previsto", hoje).lte("previsto", daqui7),
+    supabase.from("pedidos_resumo").select("total").gte("criado_em", hojeISO(-6)).neq("status", "cancelado"),
+    supabase.from("ordens_producao").select("status_pcp, entrega_limite").neq("status_pcp", "FIN"),
+    supabase.from("pedido_marcos").select("tipo").is("realizado", null).in("tipo", ["medicao", "entrega", "montagem", "vistoria"]).eq("previsto", hoje),
   ]);
 
   const somar = (rows: { tipo: string; valor: number }[] | null, t: string) => (rows ?? []).filter((r) => r.tipo === t).reduce((s, r) => s + Number(r.valor), 0);
@@ -30,6 +35,18 @@ export default async function PainelPage() {
   const potencial = (negociacoes.data ?? []).reduce((s, n) => s + Number(n.valor_estimado ?? 0), 0);
   const acoesHoje = (negociacoes.data ?? []).filter((n) => n.proxima_acao_data && n.proxima_acao_data <= hoje);
   const repor = (produtos.data ?? []).filter((p) => Number(p.estoque_atual) <= Number(p.estoque_minimo)).length;
+
+  const vendidoSemana = (vendasSemana.data ?? []).reduce((s, p) => s + Number(p.total), 0);
+  const ordensAtivas = ordens.data ?? [];
+  const ordensAtrasadas = ordensAtivas.filter((o) => situacaoPrazo(o, hoje).tipo === "atrasada").length;
+  const compromissosHoje = agendaHoje.data?.length ?? 0;
+  const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+  const atalhos = [
+    { titulo: "Ver resumo da semana", sub: `${brl(vendidoSemana)} vendidos em 7 dias`, href: "/analises", icone: "analises" as NomeDoIcone },
+    { titulo: "Ver minhas rotinas", sub: acoesHoje.length ? plural(acoesHoje.length, "retorno para hoje", "retornos para hoje") : "nada pendente hoje", href: "/crm", icone: "sino" as NomeDoIcone },
+    { titulo: "Como está a produção", sub: `${plural(ordensAtivas.length, "serviço", "serviços")} em andamento${ordensAtrasadas ? ` · ${ordensAtrasadas} atrasado${ordensAtrasadas > 1 ? "s" : ""}` : ""}`, href: "/producao", icone: "producao" as NomeDoIcone },
+    { titulo: "Agenda de hoje", sub: compromissosHoje ? plural(compromissosHoje, "compromisso", "compromissos") : "nenhum compromisso", href: "/agenda", icone: "pedidos" as NomeDoIcone },
+  ];
 
   const cards = [
     { rotulo: "Vendido no mês", valor: brl(vendido), sub: `${vendasMes.data?.length ?? 0} pedidos · lucro ${brl(lucroMes)}${vendido ? ` (${pct((lucroMes / vendido) * 100)})` : ""}`, href: "/pedidos" },
@@ -51,23 +68,39 @@ export default async function PainelPage() {
   return (
     <>
       <Titulo sub={agoraTexto()}>Painel</Titulo>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {atalhos.map((a, i) => (
+          <Link
+            key={a.titulo}
+            href={a.href}
+            className={`group flex items-center gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-18px_rgb(227_127_51/0.8)] ${i === 0 ? "border-laranja bg-laranja text-white" : "border-bege bg-white hover:border-laranja"}`}
+          >
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${i === 0 ? "bg-white/20 text-white" : "bg-bege text-violeta"}`}>
+              <Icone nome={a.icone} className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className={`block text-sm font-semibold ${i === 0 ? "text-white" : "text-stone-900"}`}>{a.titulo}</span>
+              <span className={`block truncate text-xs ${i === 0 ? "text-white/85" : "text-stone-500"}`}>{a.sub}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
       <div className="mb-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <Link href={destaque.href} className="borda-gradiente group relative overflow-hidden col-span-2 rounded-3xl p-6 sm:p-8 lg:row-span-2">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violeta/15 blur-3xl transition group-hover:bg-ciano/20" />
-          <div className="relative flex h-full flex-col justify-between gap-10">
-            <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">{destaque.rotulo}</div>
+        <Link href={destaque.href} className="cartao-laranja group relative overflow-hidden col-span-2 rounded-3xl p-6 sm:p-8 lg:row-span-2">
+                    <div className="relative flex h-full flex-col justify-between gap-10">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">{destaque.rotulo}</div>
             <div>
-              <div className="texto-gradiente font-mono text-4xl font-semibold tracking-tighter xl:text-5xl 2xl:text-6xl">{destaque.valor}</div>
-              <div className="mt-3 text-sm text-stone-500">{destaque.sub}</div>
+              <div className="font-mono text-4xl text-white font-semibold tracking-tighter xl:text-5xl 2xl:text-6xl">{destaque.valor}</div>
+              <div className="mt-3 text-sm text-white/90">{destaque.sub}</div>
             </div>
           </div>
         </Link>
         {resto.map((c) => (
           <Link key={c.rotulo} href={c.href} className="group">
-            <Cartao className="h-full p-4! transition group-hover:border-violeta/40 sm:p-6!">
-              <div className="flex items-center justify-between gap-2 text-[11px] font-medium uppercase tracking-wider text-stone-500">
+            <Cartao className="filete h-full p-4! transition group-hover:border-laranja/60 sm:p-6!">
+              <div className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wider text-violeta">
                 {c.rotulo}
-                <span className={`h-1.5 w-1.5 rounded-full ${c.alerta ? "bg-rosa shadow-[0_0_10px_2px_rgb(255_77_125/0.7)]" : "bg-stone-300"}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${c.alerta ? "bg-laranja shadow-[0_0_10px_2px_rgb(227_127_51/0.6)]" : "bg-bege"}`} />
               </div>
               <div className="mt-4 font-mono text-lg font-semibold tracking-tight text-stone-900 sm:text-2xl">{c.valor}</div>
               <div className={`mt-1 text-xs ${c.alerta ? "text-rosa" : "text-stone-500"}`}>{c.sub}</div>
@@ -78,8 +111,8 @@ export default async function PainelPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Retornos para hoje</h2>
-          <Cartao>
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Retornos para hoje</h2>
+          <Cartao className="filete">
             {acoesHoje.length ? (
               <ul className={lista}>
                 {acoesHoje.slice(0, 8).map((n) => (
@@ -95,13 +128,13 @@ export default async function PainelPage() {
           </Cartao>
         </section>
         <section>
-          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Próximas entregas</h2>
-          <Cartao>
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Próximas entregas</h2>
+          <Cartao className="filete">
             {pedidosAtivos.data?.length ? (
               <ul className={lista}>
                 {pedidosAtivos.data.slice(0, 8).map((p) => (
                   <li key={p.id} className="flex justify-between gap-4 py-2.5">
-                    <Link href={`/pedidos/${p.id}`} className="text-stone-800 transition hover:text-ciano"><span className="font-mono text-stone-500">#{p.numero}</span> {p.cliente_nome}</Link>
+                    <Link href={`/pedidos/${p.id}`} className="text-stone-800 transition hover:text-ciano"><span className="font-mono font-semibold text-violeta">#{p.numero}</span> {p.cliente_nome}</Link>
                     <span className={`text-xs ${p.data_entrega_prevista && p.data_entrega_prevista < hoje ? "text-rosa" : "text-stone-500"}`}>
                       {ROTULOS.statusPedido[p.status as keyof typeof ROTULOS.statusPedido]} · <span className="font-mono">{data(p.data_entrega_prevista)}</span>
                     </span>

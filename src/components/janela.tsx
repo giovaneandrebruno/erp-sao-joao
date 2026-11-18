@@ -52,7 +52,7 @@ export function JanelaRota({ children, largura = "lg" }: { children: ReactNode; 
       className="janela-fundo fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[8vh] print:hidden"
       onMouseDown={(e) => { if (e.target === e.currentTarget) router.back(); }}
     >
-      <div ref={caixa} role="dialog" aria-modal="true" className={`janela-caixa relative mb-10 w-full ${LARGURA[largura]} rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgb(8_16_30/0.55)] ring-1 ring-stone-900/5`}>
+      <div ref={caixa} role="dialog" aria-modal="true" className={`janela-caixa relative mb-10 w-full ${LARGURA[largura]} rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgb(26_26_26/0.55)] ring-1 ring-stone-900/5`}>
         <Cabecalho fechar={() => router.back()} />
         <div className="dentro-janela px-6 pb-6 pt-5">{children}</div>
       </div>
@@ -109,7 +109,7 @@ export function JanelaBotao({
       </button>
       <dialog
         ref={ref}
-        className={`janela mx-auto mb-auto mt-[8vh] w-[calc(100%-2rem)] ${LARGURA[largura]} overflow-visible rounded-2xl bg-white p-0 text-left text-stone-800 shadow-[0_30px_80px_-20px_rgb(8_16_30/0.55)] backdrop:bg-transparent`}
+        className={`janela mx-auto mb-auto mt-[8vh] w-[calc(100%-2rem)] ${LARGURA[largura]} overflow-visible rounded-2xl bg-white p-0 text-left text-stone-800 shadow-[0_30px_80px_-20px_rgb(26_26_26/0.55)] backdrop:bg-transparent`}
         onMouseDown={(e) => { if (e.target === ref.current) fechar(); }}
         onSubmit={(e) => {
           // formulários que mostram uma resposta (ex.: "usuário criado") deixam a janela aberta

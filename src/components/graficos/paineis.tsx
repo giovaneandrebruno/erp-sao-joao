@@ -64,7 +64,7 @@ export function Legenda({ itens }: { itens: { nome: string; cor?: string; tipo?:
       {itens.map((it, i) => (
         <li key={it.nome} className="flex items-center gap-1.5">
           {it.tipo === "linha" ? (
-            <span className="inline-block h-0.5 w-4 rounded" style={{ background: it.cor ?? "#14142b" }} />
+            <span className="inline-block h-0.5 w-4 rounded" style={{ background: it.cor ?? "#1a1a1a" }} />
           ) : it.tipo === "tracejado" ? (
             <span className="inline-block h-2.5 w-2.5 rounded-[3px] border-[1.5px] border-dashed" style={{ borderColor: it.cor ?? SERIE[0] }} />
           ) : (
@@ -154,7 +154,7 @@ export function BarrasH({
   let lista = itens;
   if (itens.length > limite) {
     const resto = itens.slice(limite - 1);
-    lista = [...itens.slice(0, limite - 1), { nome: `Outros (${resto.length})`, valor: resto.reduce((s, x) => s + x.valor, 0), cor: "#9a9eb0" }];
+    lista = [...itens.slice(0, limite - 1), { nome: `Outros (${resto.length})`, valor: resto.reduce((s, x) => s + x.valor, 0), cor: "#b8b8b8" }];
   }
   const max = maxFixo ?? Math.max(...lista.map((i) => Math.abs(i.valor)), 1);
   return (
@@ -228,7 +228,7 @@ export function Segmentada({ partes, formato = "brl" }: { partes: { nome: string
               key={p.nome}
               title={`${p.nome}: ${formatar(p.valor, formato)} (${Math.round(pctV)}%)`}
               className={`flex items-center rounded-[4px] pl-2 text-[11px] font-semibold ${i === 2 ? "text-stone-900" : "text-white"}`}
-              style={{ width: `${pctV}%`, background: p.nome === "Outros" ? "#9a9eb0" : SERIE[i] }}
+              style={{ width: `${pctV}%`, background: p.nome === "Outros" ? "#b8b8b8" : SERIE[i] }}
             >
               {pctV >= 9 ? `${Math.round(pctV)}%` : ""}
             </div>
@@ -239,7 +239,7 @@ export function Segmentada({ partes, formato = "brl" }: { partes: { nome: string
         {lista.map((p, i) => (
           <li key={p.nome} className="flex items-center justify-between gap-2">
             <span className="flex min-w-0 items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: p.nome === "Outros" ? "#9a9eb0" : SERIE[i] }} />
+              <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: p.nome === "Outros" ? "#b8b8b8" : SERIE[i] }} />
               <span className="truncate">{p.nome}</span>
             </span>
             <span className="font-mono tabular-nums text-stone-900">{formatar(p.valor, formato)}</span>
