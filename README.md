@@ -1,4 +1,4 @@
-# Emob Pro · ERP da São João Móveis
+# São João ERP · sistema de gestão da São João Móveis
 
 Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 
@@ -56,7 +56,7 @@ O projeto já vem configurado (`vercel.json`): Next.js, servidor em São Paulo (
    |---|---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | Project Settings › API Keys (ou Data API) › Project URL | Sim |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Project Settings › API Keys › Publishable key (`sb_publishable_…`) | Sim |
-   | `NEXT_PUBLIC_SITE_URL` | O endereço do site no Vercel, ex.: `https://emob-pro.vercel.app` | Recomendada (links da proposta) |
+   | `NEXT_PUBLIC_SITE_URL` | O endereço do site no Vercel, ex.: `https://sao-joao-erp.vercel.app` | Recomendada (links da proposta) |
 
 3. Clique em **Deploy**. Cada alteração aprovada no GitHub publica sozinha.
 4. No Supabase, em **Authentication › URL Configuration**, coloque o endereço do Vercel em **Site URL**.
