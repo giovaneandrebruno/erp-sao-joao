@@ -6,7 +6,7 @@ const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Emob Pro · São João Móveis",
+  title: "São João ERP · São João Móveis",
   description: "Gestão de móveis planejados da São João Móveis",
 };
 

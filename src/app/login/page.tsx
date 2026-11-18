@@ -10,7 +10,7 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center gap-4 text-center">
           <div className="rounded-[12px] shadow-lg"><Logo tamanho={48} /></div>
           <div>
-            <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold tracking-tight text-stone-900">Emob <span className="rounded-md bg-marinho px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-white">Pro</span></h1>
+            <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold tracking-tight text-stone-900">São João <span className="rounded-md bg-marinho px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-white">ERP</span></h1>
             <p className="text-[11px] uppercase tracking-[0.2em] text-stone-500">São João Móveis</p>
           </div>
         </div>

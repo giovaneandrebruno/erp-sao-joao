@@ -7,7 +7,7 @@ import { ACOES_RAPIDAS, telas } from "@/lib/navegacao";
 import { Icone, type NomeDoIcone } from "@/components/icones";
 import { buscarRegistros, type Registro } from "./busca";
 
-const EVENTO = "emob:abrir-busca";
+const EVENTO = "sj:abrir-busca";
 
 /** Abre a busca rápida de qualquer lugar (botões do menu e do topo). */
 export function abrirBusca() {
