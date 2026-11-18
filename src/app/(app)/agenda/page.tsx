@@ -5,6 +5,7 @@ import { ROTULOS2, hojeISO } from "@/lib/format";
 import { JanelaBotao } from "@/components/janela";
 import { baixarAgenda, lerAgenda } from "@/lib/ics";
 import { Desligar, LigarGoogle } from "./google";
+import { perfilAtual } from "@/lib/perfil";
 
 type Evento = { data: string; titulo: string; sub: string; href: string; tipo: "marco" | "chamado" | "venda" | "google"; externo?: boolean; feito?: boolean; atrasado?: boolean };
 
@@ -32,6 +33,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
   };
 
   const supabase = await createClient();
+  const ehAdmin = (await perfilAtual())?.papel === "admin";
   let qm = supabase
     .from("pedido_marcos")
     .select("id, tipo, previsto, realizado, pedido_id, responsavel:responsavel_id(nome), pedidos!inner(numero, status, clientes(nome))")
@@ -47,7 +49,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
   const [{ data: marcos }, { data: chamados }, { data: negs }, { data: pessoas }, { data: agendas }] = await Promise.all([
     qm, qc, qn,
     supabase.from("parceiros").select("id, nome, tipo").in("tipo", ["montador", "vendedor"]).eq("ativo", true).order("nome"),
-    // só as agendas do Google do próprio usuário (a regra do banco garante isso)
+    // agendas do Google da empresa: toda a equipe vê, só o administrador liga e desliga
     supabase.from("agendas_google").select("id, nome, url").order("criado_em"),
   ]);
 
@@ -111,9 +113,9 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
   return (
     <>
       <Titulo
-        sub="Medições, entregas, montagens, assistência, retornos de venda e o seu Google Agenda"
+        sub="Medições, entregas, montagens, assistência, retornos de venda e o Google Agenda da empresa"
         acao={
-          <JanelaBotao rotulo={agendas?.length ? "Google Agenda" : "Ligar Google Agenda"} titulo="Google Agenda" descricao="Seus compromissos do Google aparecem aqui, junto com os do sistema." variante="secundario" icone="mais" largura="md">
+          ehAdmin ? <JanelaBotao rotulo={agendas?.length ? "Google Agenda" : "Ligar Google Agenda"} titulo="Google Agenda" descricao="Os compromissos do Google aparecem aqui para toda a equipe, junto com os do sistema." variante="secundario" icone="mais" largura="md">
             <div className="flex flex-col gap-5">
               {!!agendas?.length && (
                 <div>
@@ -129,15 +131,15 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
                 </div>
               )}
               <ol className="list-decimal space-y-1.5 rounded-lg bg-stone-50 p-4 pl-8 text-sm text-stone-700">
-                <li>No computador, abra <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noreferrer" className="font-medium text-violeta hover:underline">as configurações do Google Agenda</a> com a sua conta do Gmail.</li>
-                <li>Na coluna da esquerda, em <b>Configurações das minhas agendas</b>, clique no seu nome.</li>
+                <li>No computador, entre no Gmail com o e-mail da agenda e abra <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noreferrer" className="font-medium text-violeta hover:underline">as configurações do Google Agenda</a> .</li>
+                <li>Na coluna da esquerda, em <b>Configurações das minhas agendas</b>, clique no nome da agenda.</li>
                 <li>Desça até <b>Integrar agenda</b> e copie o <b>Endereço secreto no formato iCal</b>.</li>
                 <li>Cole o endereço abaixo e clique em <b>Ligar agenda</b>.</li>
               </ol>
               <LigarGoogle />
-              <p className="text-xs text-stone-500">Só você vê a sua agenda do Google aqui. O sistema apenas lê os compromissos, não muda nada no Google. Novos compromissos podem levar alguns minutos para aparecer.</p>
+              <p className="text-xs text-stone-500">Toda a equipe vê esses compromissos na Agenda. Pode ligar mais de uma agenda. O sistema apenas lê os compromissos, não muda nada no Google. Novos compromissos podem levar alguns minutos para aparecer.</p>
             </div>
-          </JanelaBotao>
+          </JanelaBotao> : undefined
         }
       >
         Agenda
