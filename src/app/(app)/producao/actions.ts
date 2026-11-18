@@ -33,6 +33,25 @@ export async function moverStatus(id: string, direcao: 1 | -1) {
   await depoisDeMudar(supabase, id);
 }
 
+/** Quadro arrastável: o cartão solto numa coluna passa para a etapa dessa coluna. */
+export async function definirStatus(id: string, status: string) {
+  if (!SIGLAS.includes(status as SiglaStatus)) return { ok: false, erro: "Etapa inválida" };
+  const supabase = await createClient();
+  const { data: op } = await supabase.from("ordens_producao").select("status_pcp, posicao").eq("id", id).maybeSingle();
+  if (!op) return { ok: false, erro: "Ordem de serviço não encontrada" };
+  if (op.status_pcp === status) return { ok: true };
+  const posicao =
+    status === "FIN" ? "FINALIZADO"
+    : status === "PP" ? "PARADO"
+    : status === "IP" ? "PENDENCIAS"
+    : op.posicao === "FINALIZADO" || op.posicao === "PARADO" || op.posicao === "PENDENCIAS" ? "ANDAMENTO"
+    : op.posicao;
+  const { error } = await supabase.from("ordens_producao").update({ status_pcp: status, posicao }).eq("id", id);
+  if (error) return { ok: false, erro: error.message };
+  await depoisDeMudar(supabase, id);
+  return { ok: true };
+}
+
 /** Troca rápida de STATUS e POSIÇÃO, com uma anotação opcional no histórico. */
 export async function mudarStatus(id: string, form: FormData) {
   const supabase = await createClient();

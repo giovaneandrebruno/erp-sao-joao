@@ -4,9 +4,9 @@ import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Cartao, Indicador, Titulo, inputCls } from "@/components/ui";
 import { hojeISO } from "@/lib/format";
-import { CAMPOS, GRUPOS, STATUS_PCP, progresso, situacaoPrazo, statusPcp, vizinho, type Ordem } from "@/lib/pcp";
+import { CAMPOS, GRUPOS, STATUS_PCP, situacaoPrazo, statusPcp, type Ordem } from "@/lib/pcp";
 import { Legenda, PrazoSelo, SeloStatus, ValorMarco } from "./componentes";
-import { moverStatus } from "./actions";
+import { QuadroArrastavel } from "./quadro";
 
 type Busca = Record<string, string | string[] | undefined>;
 const um = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
@@ -125,64 +125,8 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
         <Legenda contagem={contagem} ativo={filtroStatus || undefined} href={(s) => montarHref(sp, { status: s })} />
       </div>
 
-      {ver === "quadro" ? <Quadro ordens={lista} hoje={hoje} filtrado={!!filtroStatus} /> : <PlanilhaOs ordens={lista} hoje={hoje} />}
+      {ver === "quadro" ? lista.length ? <QuadroArrastavel ordens={lista} hoje={hoje} concluidas={todas.length - ativas.length} /> : <Cartao><p className="text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p></Cartao> : <PlanilhaOs ordens={lista} hoje={hoje} />}
     </>
-  );
-}
-
-function Quadro({ ordens, hoje, filtrado }: { ordens: Ordem[]; hoje: string; filtrado: boolean }) {
-  const colunas = STATUS_PCP.filter((s) => s.sigla !== "FIN").filter((s) => !filtrado || ordens.some((o) => o.status_pcp === s.sigla));
-  if (!ordens.length) return <Cartao><p className="text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p></Cartao>;
-  return (
-    <div className="flex gap-3 overflow-x-auto pb-4">
-      {colunas.map((s) => {
-        const daEtapa = ordens.filter((o) => o.status_pcp === s.sigla);
-        const vazia = daEtapa.length === 0;
-        return (
-          <div key={s.sigla} className={`shrink-0 rounded-xl bg-stone-200/50 p-2 ${vazia ? "w-28" : "w-72"}`}>
-            <div className="mb-2 flex items-center gap-2 px-1">
-              <SeloStatus sigla={s.sigla} />
-              <span className={`text-xs font-semibold text-stone-600 ${vazia ? "truncate" : ""}`} title={s.nome}>{s.nome}</span>
-              <span className="ml-auto text-xs text-stone-400">{daEtapa.length}</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {daEtapa.map((o) => <CartaoOs key={o.id} o={o} hoje={hoje} />)}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function CartaoOs({ o, hoje }: { o: Ordem; hoje: string }) {
-  const s = statusPcp(o.status_pcp);
-  const prog = progresso(o, hoje);
-  const ant = vizinho(o.status_pcp, -1);
-  const prox = vizinho(o.status_pcp, 1);
-  return (
-    <div className="rounded-lg border border-stone-200 border-l-4 bg-white p-3 text-sm shadow-[0_1px_2px_rgb(20_20_43/0.04)] transition hover:shadow-[0_8px_20px_-12px_rgb(15_29_51/0.35)]" style={{ borderLeftColor: s.cor }}>
-      <Link href={`/producao/${o.id}`} className="block">
-        <div className="flex items-start justify-between gap-2">
-          <span className="font-semibold leading-snug text-stone-900">{o.cliente_nome}</span>
-          {o.os && <span className="shrink-0 rounded bg-stone-100 px-1.5 font-mono text-[11px] text-stone-600">OS {o.os}</span>}
-        </div>
-        <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-stone-500">
-          {o.posicao && <span className="font-medium text-stone-700">{o.posicao}</span>}
-          {o.consultor && <span>Consultor: {o.consultor}</span>}
-          {o.responsavel && <span>Resp.: {o.responsavel}</span>}
-        </div>
-        <div className="mt-2"><PrazoSelo ordem={o} hoje={hoje} /></div>
-        {o.pendencias && <p className="mt-2 line-clamp-2 text-xs text-rosa">{o.pendencias}</p>}
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-stone-100" title={`${prog.feitos} de ${prog.total} etapas concluídas`}>
-          <div className="h-full bg-neon" style={{ width: `${(prog.feitos / prog.total) * 100}%` }} />
-        </div>
-      </Link>
-      <div className="mt-2 flex items-center justify-between text-xs">
-        <form action={moverStatus.bind(null, o.id, -1)}><button disabled={!ant} title={ant ? `Voltar para ${ant}` : ""} className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30">← {ant ?? ""}</button></form>
-        <form action={moverStatus.bind(null, o.id, 1)}><button disabled={!prox} title={prox ? `Avançar para ${prox}` : ""} className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30">{prox ?? ""} →</button></form>
-      </div>
-    </div>
   );
 }
 
