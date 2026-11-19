@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROTULOS2, brl, data, hojeISO } from "@/lib/format";
+import { ROTULOS2, brl, data, hojeISO, linkWhats } from "@/lib/format";
 import { Aceite } from "./aceite";
 
 export const metadata: Metadata = { title: "Proposta", robots: { index: false, follow: false } };
@@ -25,7 +25,10 @@ type Proposta = {
   cliente: string;
   itens: { ambiente: string | null; descricao: string; quantidade: number; preco_unitario: number }[];
   empresa: { nome: string; telefone: string | null; email: string | null; cidade: string | null; uf: string | null };
+  textos?: { abertura: string | null; incluso: string | null; garantias: string | null; depoimento: string | null } | null;
 };
+
+const linhas = (t: string | null | undefined) => (t ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
 
 export default async function PropostaPublica({ params }: PageProps<"/p/[token]">) {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -40,6 +43,10 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
   for (const i of p.itens) ambientes.set(i.ambiente ?? "Itens", [...(ambientes.get(i.ambiente ?? "Itens") ?? []), i]);
   const vencida = Boolean(p.validade && p.validade < hojeISO());
   const podeAceitar = !p.aceite_em && !vencida && (p.status === "rascunho" || p.status === "enviado");
+  const incluso = linhas(p.textos?.incluso);
+  const garantias = linhas(p.textos?.garantias);
+  const depoimento = p.textos?.depoimento?.trim();
+  const whats = linkWhats(p.empresa.telefone, `Olá! Estou vendo a proposta nº ${p.numero} e tenho uma dúvida.`);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 md:py-16">
@@ -60,6 +67,7 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violeta/15 blur-3xl" />
         <p className="text-sm text-stone-500">Proposta preparada para</p>
         <h1 className="mb-6 text-3xl font-semibold tracking-tight text-stone-900">{p.cliente}</h1>
+        {p.textos?.abertura && <p className="mb-6 max-w-xl text-sm text-stone-600">{p.textos.abertura}</p>}
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Investimento</p>
         <p className="texto-gradiente break-words font-mono text-4xl font-semibold tracking-tighter sm:text-5xl">{brl(p.total)}</p>
         <p className="mt-2 text-sm text-stone-500">
@@ -68,6 +76,15 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
           {p.validade ? ` · válida até ${data(p.validade)}` : ""}
         </p>
       </section>
+
+      {incluso.length > 0 && (
+        <section className="vidro mb-8 rounded-2xl p-6">
+          <h2 className="mb-3 font-semibold text-stone-900">O que está incluso</h2>
+          <ul className="divide-y divide-stone-100 text-sm">
+            {incluso.map((l) => <li key={l} className="py-2 text-stone-700">✓ {l}</li>)}
+          </ul>
+        </section>
+      )}
 
       <section className="mb-8 space-y-4">
         {[...ambientes.entries()].map(([amb, itens]) => (
@@ -100,6 +117,22 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
         </section>
       )}
 
+      {(garantias.length > 0 || depoimento) && (
+        <section className="vidro mb-8 space-y-3 rounded-2xl p-6 text-sm">
+          {garantias.length > 0 && (
+            <div>
+              <h3 className="mb-1 font-semibold">Sua tranquilidade</h3>
+              <ul className="text-stone-600">{garantias.map((l) => <li key={l}>✓ {l}</li>)}</ul>
+            </div>
+          )}
+          {depoimento && <div><h3 className="mb-1 font-semibold">Quem já fez com a gente</h3><p className="whitespace-pre-line italic text-stone-600">{depoimento}</p></div>}
+        </section>
+      )}
+
+      {podeAceitar && p.validade && (
+        <p className="mb-4 text-center text-sm text-stone-600">Fechando até <strong>{data(p.validade)}</strong>, os valores e o prazo desta proposta ficam garantidos.</p>
+      )}
+
       {p.aceite_em ? (
         <p className="rounded-2xl bg-neon/10 p-6 text-center text-sm font-medium text-neon">✓ Proposta aceita por {p.aceite_nome} em {data(p.aceite_em)}. Em breve entraremos em contato.</p>
       ) : vencida ? (
@@ -109,6 +142,7 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
       ) : null}
 
       <footer className="mt-12 text-center text-xs text-stone-400">
+        {whats && <p className="mb-2"><a href={whats} target="_blank" rel="noreferrer" className="font-medium text-stone-600 underline hover:text-stone-900">Ficou com dúvida? Fale com a gente no WhatsApp</a></p>}
         {[p.empresa.telefone, p.empresa.email].filter(Boolean).join(" · ")}
       </footer>
     </main>

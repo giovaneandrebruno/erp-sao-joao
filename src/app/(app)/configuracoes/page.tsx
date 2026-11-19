@@ -133,6 +133,23 @@ export default async function ConfiguracoesPage() {
         </Cartao>
 
         <Cartao>
+          <h2 className="mb-1 font-semibold">Textos da proposta online</h2>
+          <p className="mb-4 text-sm text-stone-500">Aparecem na proposta que o cliente abre pelo link. Nas listas, escreva um item por linha. Deixe em branco o que não quiser mostrar.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {([
+              ["proposta_abertura", "Abertura (logo abaixo do nome do cliente)", 4],
+              ["proposta_incluso", "O que está incluso (um por linha)", 4],
+              ["proposta_garantias", "Garantias e tranquilidade (uma por linha)", 3],
+              ["proposta_depoimento", "Depoimento de um cliente (opcional)", 3],
+            ] as const).map(([k, r, linhasCampo]) => (
+              <Campo key={k} rotulo={r}>
+                <textarea name={k} rows={linhasCampo} defaultValue={String(v(k) ?? "")} className={`${inputCls} w-full`} />
+              </Campo>
+            ))}
+          </div>
+        </Cartao>
+
+        <Cartao>
           <h2 className="mb-4 font-semibold">Cláusulas do contrato</h2>
           <textarea name="clausulas_contrato" rows={10} defaultValue={String(v("clausulas_contrato"))} className={`${inputCls} w-full`} />
         </Cartao>

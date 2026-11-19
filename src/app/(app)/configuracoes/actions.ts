@@ -28,6 +28,11 @@ export async function salvarConfiguracoes(form: FormData) {
       margem_minima: n("margem_minima", 0),
       validade_orcamento_dias: Math.round(n("validade_orcamento_dias", 15)),
       clausulas_contrato: texto(form, "clausulas_contrato") ?? "",
+      // textos da proposta: em branco = não mostrar
+      proposta_abertura: texto(form, "proposta_abertura") ?? "",
+      proposta_incluso: texto(form, "proposta_incluso") ?? "",
+      proposta_garantias: texto(form, "proposta_garantias") ?? "",
+      proposta_depoimento: texto(form, "proposta_depoimento"),
       ...Object.fromEntries(
         (["msg_orcamento", "msg_agendamento", "msg_cobranca", "msg_cobranca_vencida", "msg_pos_venda"] as const)
           .map((k) => [k, texto(form, k)])
