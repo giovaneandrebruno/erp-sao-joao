@@ -65,11 +65,22 @@ export default async function PainelPage() {
   ];
 
   const [destaque, ...resto] = cards;
+
+  // cópia de segurança: o administrador é avisado depois de 7 dias sem baixar
+  const { data: copia } = admin ? await supabase.from("configuracoes").select("ultima_copia_em").single() : { data: null };
+  const diasSemCopia = copia ? (copia.ultima_copia_em ? Math.round((Date.parse(hoje) - Date.parse(String(copia.ultima_copia_em).slice(0, 10))) / 86_400_000) : null) : 0;
+  const avisarCopia = admin && (diasSemCopia === null || diasSemCopia > 7);
   const lista = "divide-y divide-stone-100 text-sm";
 
   return (
     <>
       <Titulo sub={agoraTexto()}>Painel</Titulo>
+      {avisarCopia && (
+        <Link href="/configuracoes" className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-laranja/40 bg-bege/40 px-5 py-3 text-sm text-stone-800 transition hover:border-laranja">
+          <span>{diasSemCopia === null ? "Você ainda não baixou nenhuma cópia de segurança do sistema." : `Faz ${diasSemCopia} dias que você não baixa uma cópia de segurança do sistema.`}</span>
+          <span className="shrink-0 font-semibold text-laranja">Baixar agora →</span>
+        </Link>
+      )}
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {atalhos.map((a, i) => (
           <Link

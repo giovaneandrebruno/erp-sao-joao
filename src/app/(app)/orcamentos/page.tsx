@@ -1,20 +1,22 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { BotaoLink, Selo, Tabela, Titulo } from "@/components/ui";
+import { BotaoLink, Selo, Tabela, Titulo, VerMais, quantidadeDaLista } from "@/components/ui";
 import { ROTULOS, brl, data } from "@/lib/format";
 
 const COR = { rascunho: "stone", enviado: "blue", aprovado: "green", recusado: "red" } as const;
 
 export default async function OrcamentosPage({ searchParams }: PageProps<"/orcamentos">) {
-  const { status } = await searchParams;
+  const sp = await searchParams;
+  const { status } = sp;
+  const qtd = quantidadeDaLista(sp.qtd);
   const supabase = await createClient();
   let consulta = supabase
     .from("orcamentos_resumo")
-    .select("id, numero, cliente_nome, unidade, status, total, criado_em, validade")
+    .select("id, numero, cliente_nome, unidade, status, total, criado_em, validade", { count: "exact" })
     .order("numero", { ascending: false })
-    .limit(200);
+    .limit(qtd);
   if (typeof status === "string" && status in COR) consulta = consulta.eq("status", status);
-  const { data: orcamentos } = await consulta;
+  const { data: orcamentos, count } = await consulta;
 
   return (
     <>
@@ -38,6 +40,7 @@ export default async function OrcamentosPage({ searchParams }: PageProps<"/orcam
           </tr>
         ))}
       </Tabela>
+      <VerMais mostrando={orcamentos?.length ?? 0} total={count} rotulo="orçamentos" parametros={sp} />
     </>
   );
 }

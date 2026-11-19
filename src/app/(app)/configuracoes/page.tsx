@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { Botao, Campo, Cartao, Titulo, inputCls } from "@/components/ui";
+import { Botao, Campo, Cartao, Titulo, estiloBotao, inputCls } from "@/components/ui";
+import { dataHora } from "@/lib/format";
 import { salvarConfiguracoes } from "./actions";
 
 export default async function ConfiguracoesPage() {
@@ -16,6 +17,25 @@ export default async function ConfiguracoesPage() {
   return (
     <>
       <Titulo>Configurações</Titulo>
+      <Cartao className="mb-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-2xl">
+            <h2 className="font-semibold">Cópia de segurança</h2>
+            <p className="mt-1 text-sm text-stone-600">
+              Baixa uma planilha .xlsx com tudo o que está no sistema: clientes, fornecedores, orçamentos, pedidos, produção, estoque e financeiro.
+              Cada assunto fica numa aba. Guarde no computador ou no pen drive.
+            </p>
+            <p className="mt-2 text-sm text-stone-500">
+              {c?.ultima_copia_em
+                ? <>Última cópia baixada: <strong>{dataHora(c.ultima_copia_em)}</strong>{c.ultima_copia_por ? `, por ${c.ultima_copia_por}` : ""}</>
+                : "Nenhuma cópia baixada ainda."}
+            </p>
+          </div>
+          {/* link comum (não o do Next): o navegador baixa o arquivo direto */}
+          <a href="/configuracoes/copia" download className={`${estiloBotao.primario} shrink-0`}>Baixar cópia (.xlsx)</a>
+        </div>
+        <p className="mt-4 rounded-lg bg-bege/40 px-4 py-2.5 text-sm text-stone-700">Dica: o Painel avisa quando passar mais de 7 dias sem baixar uma cópia.</p>
+      </Cartao>
       <form action={salvarConfiguracoes} className="flex flex-col gap-6">
         <Cartao>
           <h2 className="mb-4 font-semibold">Dados da empresa</h2>
@@ -55,12 +75,13 @@ export default async function ConfiguracoesPage() {
 
         <Cartao>
           <h2 className="mb-1 font-semibold">Mensagens prontas de WhatsApp</h2>
-          <p className="mb-4 text-sm text-stone-500">Use {"{cliente}"}, {"{empresa}"}, {"{valor}"}, {"{data}"}, {"{etapa}"} e {"{link}"}: o sistema troca pelos dados de cada cliente.</p>
+          <p className="mb-4 text-sm text-stone-500">Use {"{cliente}"}, {"{empresa}"}, {"{valor}"}, {"{data}"}, {"{etapa}"}, {"{parcela}"} e {"{link}"}: o sistema troca pelos dados de cada cliente.</p>
           <div className="grid gap-4 md:grid-cols-2">
             {([
               ["msg_orcamento", "Envio da proposta"],
               ["msg_agendamento", "Aviso de medição, entrega e montagem"],
               ["msg_cobranca", "Lembrete de parcela"],
+              ["msg_cobranca_vencida", "Cobrança de parcela vencida"],
               ["msg_pos_venda", "Pós-venda"],
             ] as const).map(([k, r]) => (
               <Campo key={k} rotulo={r}>

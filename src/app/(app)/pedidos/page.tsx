@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Selo, Tabela, Titulo } from "@/components/ui";
+import { Selo, Tabela, Titulo, VerMais, quantidadeDaLista } from "@/components/ui";
 import { COR_PEDIDO, ROTULOS, brl, data } from "@/lib/format";
 
 export default async function PedidosPage({ searchParams }: PageProps<"/pedidos">) {
-  const { status } = await searchParams;
+  const sp = await searchParams;
+  const { status } = sp;
+  const qtd = quantidadeDaLista(sp.qtd);
   const supabase = await createClient();
   let consulta = supabase
     .from("pedidos_resumo")
-    .select("id, numero, cliente_nome, unidade, status, total, data_entrega_prevista")
+    .select("id, numero, cliente_nome, unidade, status, total, data_entrega_prevista", { count: "exact" })
     .order("numero", { ascending: false })
-    .limit(200);
+    .limit(qtd);
   if (typeof status === "string" && status in COR_PEDIDO) consulta = consulta.eq("status", status);
-  const { data: pedidos } = await consulta;
+  const { data: pedidos, count } = await consulta;
 
   return (
     <>
@@ -36,6 +38,7 @@ export default async function PedidosPage({ searchParams }: PageProps<"/pedidos"
           </tr>
         ))}
       </Tabela>
+      <VerMais mostrando={pedidos?.length ?? 0} total={count} rotulo="pedidos" parametros={sp} />
     </>
   );
 }

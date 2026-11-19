@@ -10,6 +10,15 @@ export function data(valor: string | null | undefined) {
   return `${d}/${m}/${a}`;
 }
 
+/** "12/11/2026 às 17:40", no horário de Brasília. */
+export function dataHora(valor: string | null | undefined) {
+  if (!valor) return "—";
+  const d = new Date(valor);
+  const dia = d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const hora = d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+  return `${dia} às ${hora}`;
+}
+
 export function texto(form: FormData, campo: string) {
   const v = String(form.get(campo) ?? "").trim();
   return v === "" ? null : v;

@@ -12,6 +12,12 @@ const SEGMENTOS = "inline-flex rounded-lg border border-stone-200 bg-white p-0.5
 const SEG = "rounded-md px-3 py-1 text-stone-500 transition hover:text-stone-900";
 const SEG_ATIVO = "rounded-md bg-marinho px-3 py-1 font-medium text-white";
 
+/** "Pedido #12 — parcela 2/6" vira "parcela 2/6"; sem traço, "parcela". */
+function nomeDaParcela(descricao: string) {
+  const parte = descricao.split(/\s[—-]\s/).pop()?.trim();
+  return parte && parte !== descricao ? parte : "parcela";
+}
+
 function mesAtual() {
   return hojeISO().slice(0, 7);
 }
@@ -76,7 +82,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
   const inicio = `${mes}-01`;
   const fim = new Date(Date.UTC(ano, m, 0)).toISOString().slice(0, 10);
 
-  const { data: cfg } = await supabase.from("configuracoes").select("nome_fantasia, msg_cobranca").single();
+  const { data: cfg } = await supabase.from("configuracoes").select("nome_fantasia, msg_cobranca, msg_cobranca_vencida").single();
   let consulta = supabase
     .from("lancamentos")
     .select("id, tipo, unidade, descricao, categoria, valor, vencimento, pago_em, pedido_id, cliente_id, fornecedor_id, forma_pagamento, clientes(nome, telefone), fornecedores(nome)")
@@ -149,14 +155,20 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
         <Tabela cabecalho={["Vencimento", "Descrição", "Quem", "Unidade", "Valor", "Situação", ""]} vazio={!lancamentos?.length}>
           {lancamentos?.map((l) => {
             const cli = l.clientes as unknown as { nome: string; telefone: string | null } | null;
+            const vencido = !l.pago_em && l.vencimento < hoje;
+            const diasVencido = vencido ? Math.round((Date.parse(hoje) - Date.parse(l.vencimento)) / 86_400_000) : 0;
+            // parcela vencida usa a mensagem de cobrança; a vencer, o lembrete
+            const modelo = (vencido ? cfg?.msg_cobranca_vencida : null) || cfg?.msg_cobranca || "";
             const cobrar = l.tipo === "receber" && !l.pago_em && cli
-              ? linkWhats(cli.telefone, preencher(cfg?.msg_cobranca ?? "", { cliente: cli.nome.split(" ")[0], empresa: cfg?.nome_fantasia, valor: brl(l.valor), data: data(l.vencimento) }))
+              ? linkWhats(cli.telefone, preencher(modelo, { cliente: cli.nome.split(" ")[0], empresa: cfg?.nome_fantasia, valor: brl(l.valor), data: data(l.vencimento), parcela: nomeDaParcela(l.descricao) }))
               : null;
             const quem = (l.clientes as unknown as { nome: string } | null)?.nome ?? (l.fornecedores as unknown as { nome: string } | null)?.nome ?? "—";
-            const vencido = !l.pago_em && l.vencimento < hoje;
             return (
               <tr key={l.id}>
-                <td className={`px-4 py-3 ${vencido ? "font-semibold text-red-600" : ""}`}>{data(l.vencimento)}</td>
+                <td className={`px-4 py-3 ${vencido ? "font-semibold text-red-600" : ""}`}>
+                  {data(l.vencimento)}
+                  {vencido && <div className="text-xs font-normal">vencido há {diasVencido} {diasVencido === 1 ? "dia" : "dias"}</div>}
+                </td>
                 <td className="px-4 py-3">
                   {l.pedido_id ? <Link href={`/pedidos/${l.pedido_id}`} className="text-madeira-800 hover:underline">{l.descricao}</Link> : l.descricao}
                   {l.categoria && <span className="ml-2 text-xs text-stone-400">{l.categoria}</span>}
@@ -173,7 +185,9 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
                 </td>
                 <td className="whitespace-nowrap px-4 py-2">
                   <AcoesLinha>
-                    {cobrar && <a href={cobrar} target="_blank" rel="noreferrer" className="mr-2 text-xs font-medium text-[#1da851] hover:underline">cobrar</a>}
+                    {cobrar && (vencido
+                      ? <a href={cobrar} target="_blank" rel="noreferrer" className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-[#1f9d55] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110">Cobrar no WhatsApp</a>
+                      : <a href={cobrar} target="_blank" rel="noreferrer" className="mr-2 text-xs font-medium text-[#1da851] hover:underline">lembrar</a>)}
                     <LinkEditar id={l.id} />
                     <BotaoExcluir
                       acao={excluirLancamento.bind(null, l.id)}
