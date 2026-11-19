@@ -38,3 +38,12 @@ export async function salvarConfiguracoes(form: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/", "layout");
 }
+
+/** Faz uma cópia automática agora (fica junto das cópias de cada madrugada). */
+export async function fazerCopiaAgora(): Promise<string | null> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("copia_agora");
+  if (error) return `Não foi possível fazer a cópia: ${error.message}`;
+  revalidatePath("/configuracoes");
+  return null;
+}

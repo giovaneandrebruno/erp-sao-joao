@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl, decimal, data, linkWhats, preencher } from "@/lib/format";
+import { ROTULOS, brl, decimal, data, dataHora, linkWhats, preencher } from "@/lib/format";
 import { enderecoDoSite } from "@/lib/site";
 import { Copiar } from "@/components/copiar";
 import { adicionarItem, aprovar, atualizarItem, atualizarOrcamento, mudarStatus, removerItem } from "../actions";
@@ -25,7 +25,7 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
     supabase.from("configuracoes").select("margem_minima, markup_padrao, nome_fantasia, msg_orcamento").single(),
   ]);
   const [{ data: extra }, { data: cli }, site] = await Promise.all([
-    supabase.from("orcamentos").select("token, visualizado_em, aceite_em, aceite_nome").eq("id", id).maybeSingle(),
+    supabase.from("orcamentos").select("token, visualizado_em, aceite_em, aceite_nome, aberturas, ultima_abertura_em").eq("id", id).maybeSingle(),
     supabase.from("clientes").select("telefone").eq("id", o?.cliente_id ?? "").maybeSingle(),
     enderecoDoSite(),
   ]);
@@ -70,7 +70,7 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
             <div className="flex items-center gap-2 font-semibold">
               Proposta online
               {extra?.aceite_em ? <Selo cor="green">Aceita por {extra.aceite_nome} em {data(extra.aceite_em)}</Selo>
-                : extra?.visualizado_em ? <Selo cor="blue">Cliente abriu em {data(extra.visualizado_em)}</Selo>
+                : extra?.visualizado_em ? <Selo cor="blue">Cliente abriu {extra.aberturas > 1 ? `${extra.aberturas} vezes, a última em ${dataHora(extra.ultima_abertura_em)}` : `em ${dataHora(extra.ultima_abertura_em ?? extra.visualizado_em)}`}</Selo>
                 : <Selo>Ainda não aberta</Selo>}
             </div>
             <p className="truncate text-sm text-stone-500">O cliente vê os itens por ambiente, o valor e pode aceitar pelo celular. Custos e lucro não aparecem.</p>
