@@ -3,8 +3,9 @@ import Link from "next/link";
 import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
-import { criarLancamento, excluirLancamento, marcarPago } from "./actions";
+import { ROTULOS, brl, decimal, data, hojeISO, linkWhats, preencher } from "@/lib/format";
+import { atualizarLancamento, criarLancamento, excluirLancamento, marcarPago } from "./actions";
+import { AcoesLinha, BotaoCancelar, BotaoExcluir, JanelaEditar, LinkEditar } from "@/components/acoes";
 import { JanelaBotao } from "@/components/janela";
 
 const SEGMENTOS = "inline-flex rounded-lg border border-stone-200 bg-white p-0.5 shadow-[0_1px_2px_rgb(26_26_26/0.04)]";
@@ -13,6 +14,53 @@ const SEG_ATIVO = "rounded-md bg-marinho px-3 py-1 font-medium text-white";
 
 function mesAtual() {
   return hojeISO().slice(0, 7);
+}
+
+type Lanc = { tipo?: string | null; descricao?: string | null; categoria?: string | null; valor?: number | null; vencimento?: string | null; unidade?: string | null; fornecedor_id?: string | null; cliente_id?: string | null; forma_pagamento?: string | null };
+type Opcao = { id: string; nome: string };
+
+function FormLancamento({ id, l = {}, hoje, fornecedores, clientes }: { id?: string; l?: Lanc; hoje: string; fornecedores: Opcao[] | null; clientes: Opcao[] | null }) {
+  return (
+    <form action={id ? atualizarLancamento.bind(null, id) : criarLancamento} className="grid gap-3 md:grid-cols-12">
+      <Campo rotulo="Tipo" className="md:col-span-2">
+        <select name="tipo" defaultValue={l.tipo ?? "pagar"} className={inputCls}><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
+      </Campo>
+      <Campo rotulo="Descrição *" className="md:col-span-4">
+        <input name="descricao" required defaultValue={l.descricao ?? ""} placeholder="Compra de chapas, aluguel, energia..." className={inputCls} />
+      </Campo>
+      <Campo rotulo="Categoria" className="md:col-span-2">
+        <input name="categoria" list="categorias" defaultValue={l.categoria ?? ""} className={inputCls} />
+        <datalist id="categorias">
+          {["Matéria-prima", "Ferragens", "Salários", "Aluguel", "Energia", "Impostos", "Frete", "Manutenção", "Venda", "Outros"].map((c) => <option key={c} value={c} />)}
+        </datalist>
+      </Campo>
+      <Campo rotulo="Valor (R$) *" className="md:col-span-2">
+        <input name="valor" required inputMode="decimal" defaultValue={decimal(l.valor)} className={inputCls} />
+      </Campo>
+      <Campo rotulo="Vencimento *" className="md:col-span-2">
+        <input name="vencimento" type="date" required defaultValue={l.vencimento ?? hoje} className={inputCls} />
+      </Campo>
+      <Campo rotulo="Unidade" className="md:col-span-2">
+        <select name="unidade" defaultValue={l.unidade ?? "marcenaria"} className={inputCls}><option value="marcenaria">Marcenaria</option><option value="loja">Loja</option></select>
+      </Campo>
+      <Campo rotulo="Fornecedor" className="md:col-span-3">
+        <select name="fornecedor_id" defaultValue={l.fornecedor_id ?? ""} className={inputCls}>
+          <option value="">—</option>
+          {fornecedores?.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+        </select>
+      </Campo>
+      <Campo rotulo="Cliente" className="md:col-span-3">
+        <select name="cliente_id" defaultValue={l.cliente_id ?? ""} className={inputCls}>
+          <option value="">—</option>
+          {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </select>
+      </Campo>
+      <Campo rotulo="Forma de pagamento" className="md:col-span-2">
+        <input name="forma_pagamento" defaultValue={l.forma_pagamento ?? ""} className={inputCls} />
+      </Campo>
+      <div className={`flex items-end gap-2 ${id ? "md:col-span-12" : "md:col-span-2"}`}><Botao type="submit">{id ? "Salvar alterações" : "Lançar"}</Botao>{id && <BotaoCancelar />}</div>
+    </form>
+  );
 }
 
 export default async function FinanceiroPage({ searchParams }: PageProps<"/financeiro">) {
@@ -31,7 +79,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
   const { data: cfg } = await supabase.from("configuracoes").select("nome_fantasia, msg_cobranca").single();
   let consulta = supabase
     .from("lancamentos")
-    .select("id, tipo, unidade, descricao, categoria, valor, vencimento, pago_em, pedido_id, clientes(nome, telefone), fornecedores(nome)")
+    .select("id, tipo, unidade, descricao, categoria, valor, vencimento, pago_em, pedido_id, cliente_id, fornecedor_id, forma_pagamento, clientes(nome, telefone), fornecedores(nome)")
     .order("vencimento");
   if (situacao === "vencidos") consulta = consulta.is("pago_em", null).lt("vencimento", hoje);
   else consulta = consulta.gte("vencimento", inicio).lte("vencimento", fim);
@@ -60,48 +108,11 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
   const mesSeguinte = new Date(Date.UTC(ano, m, 1)).toISOString().slice(0, 7);
 
   const novoLancamento = (
-    <JanelaBotao rotulo="Novo lançamento" titulo="Novo lançamento" descricao="Conta a pagar ou a receber." largura="xl" abrirAoCarregar={sp.novo === "1"}>
-      <form action={criarLancamento} className="grid gap-3 md:grid-cols-12">
-        <Campo rotulo="Tipo" className="md:col-span-2">
-          <select name="tipo" className={inputCls}><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
-        </Campo>
-        <Campo rotulo="Descrição *" className="md:col-span-4">
-          <input name="descricao" required placeholder="Compra de chapas, aluguel, energia..." className={inputCls} />
-        </Campo>
-        <Campo rotulo="Categoria" className="md:col-span-2">
-          <input name="categoria" list="categorias" className={inputCls} />
-          <datalist id="categorias">
-            {["Matéria-prima", "Ferragens", "Salários", "Aluguel", "Energia", "Impostos", "Frete", "Manutenção", "Venda", "Outros"].map((c) => <option key={c} value={c} />)}
-          </datalist>
-        </Campo>
-        <Campo rotulo="Valor (R$) *" className="md:col-span-2">
-          <input name="valor" required inputMode="decimal" className={inputCls} />
-        </Campo>
-        <Campo rotulo="Vencimento *" className="md:col-span-2">
-          <input name="vencimento" type="date" required defaultValue={hoje} className={inputCls} />
-        </Campo>
-        <Campo rotulo="Unidade" className="md:col-span-2">
-          <select name="unidade" className={inputCls}><option value="marcenaria">Marcenaria</option><option value="loja">Loja</option></select>
-        </Campo>
-        <Campo rotulo="Fornecedor" className="md:col-span-3">
-          <select name="fornecedor_id" defaultValue="" className={inputCls}>
-            <option value="">—</option>
-            {fornecedores?.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
-          </select>
-        </Campo>
-        <Campo rotulo="Cliente" className="md:col-span-3">
-          <select name="cliente_id" defaultValue="" className={inputCls}>
-            <option value="">—</option>
-            {clientes?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
-        </Campo>
-        <Campo rotulo="Forma de pagamento" className="md:col-span-2">
-          <input name="forma_pagamento" className={inputCls} />
-        </Campo>
-        <div className="flex items-end md:col-span-2"><Botao type="submit">Lançar</Botao></div>
-      </form>
+    <JanelaBotao rotulo="Novo lançamento" titulo="Novo lançamento" descricao="Conta a pagar ou a receber." largura="xl" abrirAoCarregar={sp.novo === "1"} aviso="Lançamento salvo">
+      <FormLancamento hoje={hoje} fornecedores={fornecedores} clientes={clientes} />
     </JanelaBotao>
   );
+  const emEdicao = typeof sp.editar === "string" ? lancamentos?.find((l) => l.id === sp.editar) : undefined;
 
   return (
     <>
@@ -160,9 +171,17 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
                     </button>
                   </form>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right">
-                  {cobrar && <a href={cobrar} target="_blank" rel="noreferrer" className="mr-3 text-xs font-medium text-[#1da851] hover:underline">cobrar</a>}
-                  <form className="inline" action={excluirLancamento.bind(null, l.id)}><button className="text-xs text-stone-400 hover:text-red-600 hover:underline">excluir</button></form>
+                <td className="whitespace-nowrap px-4 py-2">
+                  <AcoesLinha>
+                    {cobrar && <a href={cobrar} target="_blank" rel="noreferrer" className="mr-2 text-xs font-medium text-[#1da851] hover:underline">cobrar</a>}
+                    <LinkEditar id={l.id} />
+                    <BotaoExcluir
+                      acao={excluirLancamento.bind(null, l.id)}
+                      titulo="Excluir este lançamento?"
+                      detalhe={<>{l.descricao} · <strong className="font-mono">{brl(l.valor)}</strong></>}
+                      aviso="Lançamento excluído"
+                    />
+                  </AcoesLinha>
                 </td>
               </tr>
             );
@@ -170,6 +189,11 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
         </Tabela>
       </div>
 
+      {emEdicao && (
+        <JanelaEditar key={emEdicao.id} titulo="Alterar lançamento" descricao={emEdicao.descricao} largura="xl" aviso="Lançamento salvo">
+          <FormLancamento id={emEdicao.id} l={emEdicao} hoje={hoje} fornecedores={fornecedores} clientes={clientes} />
+        </JanelaEditar>
+      )}
     </>
   );
 }

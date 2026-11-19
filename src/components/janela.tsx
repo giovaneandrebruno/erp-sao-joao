@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Icone, type NomeDoIcone } from "./icones";
 import { estiloBotao } from "./ui";
+import { avisar } from "./acoes";
 
 type Largura = "sm" | "md" | "lg" | "xl";
 const LARGURA: Record<Largura, string> = { sm: "max-w-md", md: "max-w-2xl", lg: "max-w-3xl", xl: "max-w-5xl" };
@@ -73,6 +74,7 @@ export function JanelaBotao({
   icone = "mais",
   largura = "lg",
   abrirAoCarregar = false,
+  aviso = "Salvo",
   className,
 }: {
   rotulo: ReactNode;
@@ -83,6 +85,8 @@ export function JanelaBotao({
   icone?: NomeDoIcone | null;
   largura?: Largura;
   abrirAoCarregar?: boolean;
+  /** Aviso rápido mostrado no canto da tela depois de enviar. */
+  aviso?: string | null;
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -115,7 +119,7 @@ export function JanelaBotao({
           // formulários que mostram uma resposta (ex.: "usuário criado") deixam a janela aberta
           if (e.defaultPrevented || (e.target as HTMLElement).closest("[data-manter-aberta]")) return;
           // espera o formulário ser enviado antes de fechar
-          setTimeout(fechar, 0);
+          setTimeout(() => { fechar(); if (aviso) avisar(aviso); }, 0);
         }}
       >
         <Cabecalho titulo={titulo} descricao={descricao} fechar={fechar} />

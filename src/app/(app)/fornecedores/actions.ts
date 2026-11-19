@@ -20,3 +20,12 @@ export async function salvarFornecedor(id: string | null, form: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/fornecedores");
 }
+
+/** Exclui o fornecedor. Compras e contas ligadas a ele ficam, só sem o fornecedor. */
+export async function excluirFornecedor(id: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+  if (error) return `Não foi possível excluir: ${error.message}`;
+  revalidatePath("/fornecedores");
+  return null;
+}

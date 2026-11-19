@@ -22,6 +22,12 @@ export function numero(form: FormData, campo: string) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Número para preencher um campo de formulário (vírgula decimal, que é como `numero` lê). */
+export function decimal(v: number | string | null | undefined) {
+  if (v === null || v === undefined || v === "") return "";
+  return String(v).replace(".", ",");
+}
+
 export const ROTULOS = {
   unidade: { marcenaria: "Marcenaria", loja: "Loja" },
   statusOrcamento: { rascunho: "Rascunho", enviado: "Enviado", aprovado: "Aprovado", recusado: "Recusado" },

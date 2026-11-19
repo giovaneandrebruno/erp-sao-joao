@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Indicador, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
 import { brl, data } from "@/lib/format";
-import { registrarMovimento } from "../actions";
+import { excluirProduto, registrarMovimento } from "../actions";
+import { BotaoExcluir } from "@/components/acoes";
 import { FormProduto } from "../form";
 import { JanelaBotao } from "@/components/janela";
 
@@ -51,6 +52,7 @@ export default async function ProdutoPage({ params }: PageProps<"/estoque/[id]">
               <FormProduto produto={produto} fornecedores={fornecedores ?? []} />
             </JanelaBotao>
             {produto.tipo !== "servico" && movimentar}
+            <BotaoExcluir acao={excluirProduto.bind(null, id)} rotulo="Excluir" titulo="Excluir este produto?" detalhe={<strong>{produto.nome}</strong>} aviso="Produto excluído" depois="/estoque" />
           </div>
         }
       >
