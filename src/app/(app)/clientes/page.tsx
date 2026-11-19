@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
-import { BotaoLink, Tabela, Titulo, inputCls } from "@/components/ui";
+import { BotaoLink, Tabela, Titulo, VerMais, inputCls, quantidadeDaLista } from "@/components/ui";
 
 export default async function ClientesPage({ searchParams }: PageProps<"/clientes">) {
-  const { busca } = await searchParams;
+  const sp = await searchParams;
+  const { busca } = sp;
+  const qtd = quantidadeDaLista(sp.qtd);
   const termo = typeof busca === "string" ? busca.trim() : "";
   const supabase = await createClient();
-  let consulta = supabase.from("clientes").select("id, nome, telefone, cidade, uf").order("nome").limit(200);
+  let consulta = supabase.from("clientes").select("id, nome, telefone, cidade, uf", { count: "exact" }).order("nome").limit(qtd);
   const seguro = termo.replace(/[,()%*]/g, " ");
   if (seguro) consulta = consulta.or(`nome.ilike.%${seguro}%,telefone.ilike.%${seguro}%,cpf_cnpj.ilike.%${seguro}%`);
-  const { data: clientes = [] } = await consulta;
+  const { data: clientes = [], count } = await consulta;
 
   return (
     <>
@@ -27,6 +29,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
           </tr>
         ))}
       </Tabela>
+      <VerMais mostrando={clientes?.length ?? 0} total={count} rotulo="clientes" parametros={sp} />
     </>
   );
 }

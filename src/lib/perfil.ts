@@ -13,3 +13,10 @@ export const perfilAtual = cache(async (): Promise<Perfil | null> => {
   const { data } = await supabase.from("perfis").select("user_id, email, nome, papel, parceiro_id").eq("user_id", uid).maybeSingle();
   return (data as Perfil | null) ?? null;
 });
+
+/** Para ações do financeiro: só o administrador passa. */
+export async function exigirAdmin() {
+  const perfil = await perfilAtual();
+  if (perfil?.papel !== "admin") throw new Error("Só o administrador pode mexer no financeiro.");
+  return perfil;
+}

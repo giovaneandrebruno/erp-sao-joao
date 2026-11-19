@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -7,10 +8,13 @@ import { atualizarMarco, criarOrdem, gerarParcelas, lancarComissoes, mudarStatus
 import { Previsao } from "../../orcamentos/previsao";
 import { JanelaBotao } from "@/components/janela";
 import { SeloStatus } from "../../producao/componentes";
+import { perfilAtual } from "@/lib/perfil";
 
 export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { id } = await params;
   const supabase = await createClient();
+  const ehAdmin = (await perfilAtual())?.papel === "admin";
   const [{ data: p }, { data: itens }, { data: ordens }, { data: parcelas }, { data: marcos }, { data: montadores }, { data: cfg }] = await Promise.all([
     supabase.from("pedidos_resumo").select("*").eq("id", id).maybeSingle(),
     supabase.from("pedido_itens").select("*").eq("pedido_id", id).order("ordem"),
@@ -74,7 +78,8 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
       </Cartao>
 
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
-        <div>
+        {/* lucro e comissões: informação do financeiro, só o administrador vê */}
+        {ehAdmin && <div>
           <Previsao r={p} margemMinima={Number(cfg?.margem_minima ?? 0)} titulo="Resultado do pedido" />
           <Cartao className="mt-4">
             <h3 className="mb-2 font-semibold">Comissões</h3>
@@ -89,8 +94,8 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
               <p className="mt-2 text-sm text-stone-400">Sem comissões neste pedido.</p>
             )}
           </Cartao>
-        </div>
-        <Cartao>
+        </div>}
+        <Cartao className={ehAdmin ? undefined : "lg:col-span-2"}>
           <h3 className="mb-3 font-semibold">Marcos de prazo</h3>
           <div className="flex flex-col divide-y divide-stone-100">
             {marcosOrdenados.map((m) => {

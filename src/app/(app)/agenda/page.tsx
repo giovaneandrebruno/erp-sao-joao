@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Titulo } from "@/components/ui";
@@ -19,6 +20,7 @@ const COR = {
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 export default async function AgendaPage({ searchParams }: PageProps<"/agenda">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const sp = await searchParams;
   const hoje = hojeISO();
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : hoje.slice(0, 7);

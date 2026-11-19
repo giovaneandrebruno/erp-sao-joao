@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +11,7 @@ import { FormOrdem } from "../form";
 import { anotar, moverStatus, mudarStatus } from "../actions";
 
 export default async function OrdemPage({ params }: PageProps<"/producao/[id]">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { id } = await params;
   const supabase = await createClient();
   const [{ data: ordem }, { data: historico }, { data: clientes }] = await Promise.all([

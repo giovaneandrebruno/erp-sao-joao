@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { FerramentasImportacao } from "@/components/importador";
@@ -19,6 +20,7 @@ function montarHref(atual: Busca, muda: Record<string, string | undefined>) {
 }
 
 export default async function ProducaoPage({ searchParams }: PageProps<"/producao">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const sp = (await searchParams) as Busca;
   const ver = um(sp.ver) || "quadro";
   const termo = um(sp.busca).trim();

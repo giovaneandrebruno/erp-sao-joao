@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Indicador, Tabela, Titulo } from "@/components/ui";
@@ -14,6 +15,7 @@ function somaPor<T>(lista: T[], chave: (x: T) => string, valor: (x: T) => number
 }
 
 export default async function RelatoriosPage({ searchParams }: PageProps<"/relatorios">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const sp = await searchParams;
   const hoje = hojeISO();
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : hoje.slice(0, 7);

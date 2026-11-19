@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Titulo } from "@/components/ui";
@@ -5,6 +6,7 @@ import { ETAPAS_NEGOCIACAO, ROTULOS2, brl, data, hojeISO } from "@/lib/format";
 import { moverNegociacao } from "./actions";
 
 export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { fechadas } = await searchParams;
   const supabase = await createClient();
   let consulta = supabase

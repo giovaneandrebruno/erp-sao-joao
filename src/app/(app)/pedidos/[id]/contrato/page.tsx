@@ -1,9 +1,11 @@
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ROTULOS2, brl, data } from "@/lib/format";
 import { BotaoImprimir } from "./botao";
 
 export default async function ContratoPage({ params }: PageProps<"/pedidos/[id]/contrato">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { id } = await params;
   const supabase = await createClient();
   const [{ data: p }, { data: itens }, { data: parcelas }, { data: cfg }, { data: marcos }] = await Promise.all([

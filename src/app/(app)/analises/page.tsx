@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { Titulo } from "@/components/ui";
 import { ROTULOS, hojeISO } from "@/lib/format";
@@ -16,6 +17,7 @@ const ABAS = [
 type Aba = (typeof ABAS)[number]["chave"];
 
 export default async function AnalisesPage({ searchParams }: PageProps<"/analises">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const sp = await searchParams;
   const hoje = hojeISO();
   const mesAtual = hoje.slice(0, 7);

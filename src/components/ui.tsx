@@ -116,3 +116,24 @@ export function LinhaValor({ rotulo, valor, forte, negativo }: { rotulo: string;
     </div>
   );
 }
+
+/** Quantos itens a lista mostra: começa com 200 e cresce de 200 em 200 ("Ver mais"). */
+export const PAGINA = 200;
+export function quantidadeDaLista(valor: unknown) {
+  const n = Number(valor);
+  return Number.isFinite(n) && n >= PAGINA ? Math.min(Math.floor(n / PAGINA) * PAGINA, 5000) : PAGINA;
+}
+
+/** Rodapé da lista: "Mostrando 200 de 512" + botão para carregar mais 200. */
+export function VerMais({ mostrando, total, rotulo, parametros }: { mostrando: number; total: number | null; rotulo: string; parametros: Record<string, string | string[] | undefined> }) {
+  if (!total || total <= mostrando) return null;
+  const busca = new URLSearchParams();
+  for (const [k, v] of Object.entries(parametros)) if (typeof v === "string" && k !== "qtd") busca.set(k, v);
+  busca.set("qtd", String(mostrando + PAGINA));
+  return (
+    <div className="mt-4 flex flex-col items-center gap-2 text-sm text-stone-600">
+      <span>Mostrando <b>{mostrando}</b> de <b>{total}</b> {rotulo}</span>
+      <Link href={`?${busca.toString()}`} scroll={false} className={SECUNDARIO}>Ver mais {Math.min(PAGINA, total - mostrando)}</Link>
+    </div>
+  );
+}
