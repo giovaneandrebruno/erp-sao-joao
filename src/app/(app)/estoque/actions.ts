@@ -39,3 +39,22 @@ export async function registrarMovimento(produtoId: string, form: FormData) {
   revalidatePath(`/estoque/${produtoId}`);
   revalidatePath("/estoque");
 }
+
+/**
+ * Exclui o produto só se ele nunca foi usado (orçamentos, pedidos ou movimentações de estoque).
+ * Se já foi usado, o caminho é desmarcar "Ativo" no cadastro.
+ */
+export async function excluirProduto(id: string): Promise<string | null> {
+  const supabase = await createClient();
+  const tabelas = ["orcamento_itens", "pedido_itens", "movimentos_estoque"] as const;
+  const usos = await Promise.all(
+    tabelas.map(async (t) => (await supabase.from(t).select("id", { count: "exact", head: true }).eq("produto_id", id)).count ?? 0),
+  );
+  if (usos.some((n) => n > 0)) {
+    return "Este produto já aparece em orçamentos, pedidos ou movimentações de estoque. Para não perder o histórico, abra \"Editar produto\" e desmarque \"Ativo\".";
+  }
+  const { error } = await supabase.from("produtos").delete().eq("id", id);
+  if (error) return `Não foi possível excluir: ${error.message}`;
+  revalidatePath("/estoque");
+  return null;
+}

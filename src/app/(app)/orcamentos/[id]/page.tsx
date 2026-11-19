@@ -2,21 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS, brl, data, linkWhats, preencher } from "@/lib/format";
+import { ROTULOS, brl, decimal, data, linkWhats, preencher } from "@/lib/format";
 import { enderecoDoSite } from "@/lib/site";
 import { Copiar } from "@/components/copiar";
-import { adicionarItem, aprovar, atualizarOrcamento, mudarStatus, removerItem } from "../actions";
+import { adicionarItem, aprovar, atualizarItem, atualizarOrcamento, mudarStatus, removerItem } from "../actions";
+import { ProcurarProduto } from "../procurar";
+import { AcoesLinha, BotaoCancelar, BotaoExcluir, JanelaEditar, LinkEditar } from "@/components/acoes";
 import { CamposOrcamento } from "../campos";
 import { Previsao } from "../previsao";
 import { ImportarProjeto } from "../importar";
 
-export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[id]">) {
+export default async function OrcamentoPage({ params, searchParams }: PageProps<"/orcamentos/[id]">) {
   const { id } = await params;
+  const { editar } = await searchParams;
   const supabase = await createClient();
   const [{ data: o }, { data: itens }, { data: produtos }, { data: pedido }, { data: parceiros }, { data: cfg }] = await Promise.all([
     supabase.from("orcamentos_resumo").select("*").eq("id", id).maybeSingle(),
     supabase.from("orcamento_itens").select("*").eq("orcamento_id", id).order("ordem").order("criado_em"),
-    supabase.from("produtos").select("id, nome, preco_venda").eq("ativo", true).order("nome"),
+    supabase.from("produtos").select("id, nome, preco_venda, tipo, estoque_atual, unidade_medida").eq("ativo", true).order("nome"),
     supabase.from("pedidos").select("id, numero").eq("orcamento_id", id).maybeSingle(),
     supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
     supabase.from("configuracoes").select("margem_minima, markup_padrao, nome_fantasia, msg_orcamento").single(),
@@ -92,11 +95,17 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
                 <td className="px-4 py-3 text-stone-500">{brl(i.custo_unitario)}</td>
                 <td className="px-4 py-3">{brl(i.preco_unitario)}</td>
                 <td className="px-4 py-3 font-medium">{brl(Number(i.quantidade) * Number(i.preco_unitario))}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="whitespace-nowrap px-4 py-2">
                   {editavel && (
-                    <form action={removerItem.bind(null, id, i.id)}>
-                      <button className="text-xs text-red-600 hover:underline">remover</button>
-                    </form>
+                    <AcoesLinha>
+                      <LinkEditar id={i.id} />
+                      <BotaoExcluir
+                        acao={removerItem.bind(null, id, i.id)}
+                        titulo="Remover este item do orçamento?"
+                        detalhe={<>{i.descricao} · <strong className="font-mono">{brl(Number(i.quantidade) * Number(i.preco_unitario))}</strong></>}
+                        aviso="Item removido"
+                      />
+                    </AcoesLinha>
                   )}
                 </td>
               </tr>
@@ -118,12 +127,15 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
 
       {editavel && (
         <Cartao className="mb-8">
-          <h3 className="mb-3 font-semibold">Adicionar item</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-semibold">Adicionar item</h3>
+            <ProcurarProduto orcamentoId={id} produtos={produtos ?? []} ambientes={ambientes} />
+          </div>
           <form action={adicionarItem.bind(null, id)} className="grid gap-3 md:grid-cols-12">
             <Campo rotulo="Ambiente" className="md:col-span-2">
               <input name="ambiente" list="ambientes" placeholder="Cozinha" className={inputCls} />
               <datalist id="ambientes">
-                {[...ambientes, "Cozinha", "Dormitório casal", "Dormitório solteiro", "Banheiro", "Sala", "Home office", "Área de serviço", "Closet"].map((a) => <option key={a} value={a} />)}
+                {Array.from(new Set([...ambientes, "Cozinha", "Dormitório casal", "Dormitório solteiro", "Banheiro", "Sala", "Home office", "Área de serviço", "Closet"])).map((a) => <option key={a} value={a} />)}
               </datalist>
             </Campo>
             <Campo rotulo="Produto do catálogo" className="md:col-span-3">
@@ -161,6 +173,35 @@ export default async function OrcamentoPage({ params }: PageProps<"/orcamentos/[
           </fieldset>
         </form>
       </Cartao>
+
+      {(() => {
+        const item = editavel && typeof editar === "string" ? itens?.find((x) => x.id === editar) : undefined;
+        return item ? (
+          <JanelaEditar key={item.id} titulo="Alterar item" descricao={item.descricao} aviso="Item salvo">
+            <form action={atualizarItem.bind(null, id, item.id)} className="grid gap-3 md:grid-cols-6">
+              <Campo rotulo="Ambiente" className="md:col-span-2">
+                <input name="ambiente" list="ambientes" defaultValue={item.ambiente ?? ""} className={inputCls} />
+              </Campo>
+              <Campo rotulo="Descrição *" className="md:col-span-4">
+                <input name="descricao" required defaultValue={item.descricao ?? ""} className={inputCls} />
+              </Campo>
+              <Campo rotulo="Qtd" className="md:col-span-2">
+                <input name="quantidade" inputMode="decimal" defaultValue={decimal(item.quantidade ?? 1)} className={inputCls} />
+              </Campo>
+              <Campo rotulo="Custo unit. (R$)" className="md:col-span-2">
+                <input name="custo_unitario" inputMode="decimal" defaultValue={decimal(item.custo_unitario ?? 0)} className={inputCls} />
+              </Campo>
+              <Campo rotulo="Venda unit. (R$)" className="md:col-span-2">
+                <input name="preco_unitario" inputMode="decimal" defaultValue={decimal(item.preco_unitario ?? 0)} className={inputCls} />
+              </Campo>
+              <div className="flex gap-2 md:col-span-6">
+                <Botao type="submit">Salvar alterações</Botao>
+                <BotaoCancelar />
+              </div>
+            </form>
+          </JanelaEditar>
+        ) : null;
+      })()}
     </>
   );
 }

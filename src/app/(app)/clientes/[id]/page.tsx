@@ -5,6 +5,8 @@ import { BotaoLink, Cartao, Selo, Tabela, Titulo } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
 import { ROTULOS, brl, data } from "@/lib/format";
 import { FormCliente } from "../form";
+import { excluirCliente } from "../actions";
+import { BotaoExcluir } from "@/components/acoes";
 import { SeloStatus } from "../../producao/componentes";
 
 export default async function ClientePage({ params }: PageProps<"/clientes/[id]">) {
@@ -26,6 +28,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
             <JanelaBotao rotulo="Editar cadastro" titulo="Editar cliente" descricao={cliente.nome} variante="secundario" icone={null}>
               <FormCliente cliente={cliente} />
             </JanelaBotao>
+            <BotaoExcluir acao={excluirCliente.bind(null, id)} rotulo="Excluir" titulo="Excluir este cliente?" detalhe={<strong>{cliente.nome}</strong>} aviso="Cliente excluído" depois="/clientes" />
             <BotaoLink href={`/producao/nova?cliente=${id}`} variante="secundario">Nova OS</BotaoLink>
             <BotaoLink href={`/crm/nova?cliente=${id}`} variante="secundario">Nova negociação</BotaoLink>
             <BotaoLink href={`/orcamentos/novo?cliente=${id}`}>Novo orçamento</BotaoLink>

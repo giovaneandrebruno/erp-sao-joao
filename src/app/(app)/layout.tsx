@@ -5,6 +5,7 @@ import { Icone } from "@/components/icones";
 import { Menu } from "./menu";
 import { Barra } from "./barra";
 import { Paleta } from "./paleta";
+import { Avisos } from "@/components/acoes";
 import { sair } from "../login/actions";
 import { perfilAtual } from "@/lib/perfil";
 import { ROTULO_PAPEL } from "@/lib/acesso";
@@ -69,6 +70,7 @@ export default function AppLayout({ children, modal }: LayoutProps<"/">) {
         </main>
       </div>
       {modal}
+      <Avisos />
       <Suspense fallback={null}>
         <BuscaDoUsuario />
       </Suspense>

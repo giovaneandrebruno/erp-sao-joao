@@ -91,11 +91,29 @@ export async function adicionarItem(orcamentoId: string, form: FormData) {
   revalidatePath(`/orcamentos/${orcamentoId}`);
 }
 
-export async function removerItem(orcamentoId: string, itemId: string) {
+export async function atualizarItem(orcamentoId: string, itemId: string, form: FormData) {
   const supabase = await createClient();
-  const { error } = await supabase.from("orcamento_itens").delete().eq("id", itemId);
+  const { error } = await supabase
+    .from("orcamento_itens")
+    .update({
+      ambiente: texto(form, "ambiente"),
+      descricao: texto(form, "descricao") ?? "Item",
+      quantidade: numero(form, "quantidade") ?? 1,
+      custo_unitario: numero(form, "custo_unitario") ?? 0,
+      preco_unitario: numero(form, "preco_unitario") ?? 0,
+    })
+    .eq("id", itemId)
+    .eq("orcamento_id", orcamentoId);
   if (error) throw new Error(error.message);
   revalidatePath(`/orcamentos/${orcamentoId}`);
+}
+
+export async function removerItem(orcamentoId: string, itemId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("orcamento_itens").delete().eq("id", itemId);
+  if (error) return `Não foi possível remover: ${error.message}`;
+  revalidatePath(`/orcamentos/${orcamentoId}`);
+  return null;
 }
 
 export async function mudarStatus(id: string, status: "rascunho" | "enviado" | "recusado") {
