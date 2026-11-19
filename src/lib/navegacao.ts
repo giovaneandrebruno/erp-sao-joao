@@ -91,6 +91,14 @@ export const NAVEGACAO: Secao[] = [
     titulo: "Sistema",
     abas: [
       { rotulo: "Importar arquivos", icone: "importar", href: "/importar" },
+      {
+        rotulo: "Melhorias e histórico",
+        icone: "analises",
+        filhos: [
+          { href: "/melhorias", rotulo: "Melhorias do sistema", dica: "Ideias com nota de ajuda e de trabalho" },
+          { href: "/historico", rotulo: "Histórico de alterações", dica: "Quem mudou o quê e quando" },
+        ],
+      },
       { rotulo: "Equipe e parceiros", icone: "equipe", href: "/equipe" },
       { rotulo: "Configurações", icone: "configuracoes", href: "/configuracoes" },
     ],

@@ -2,27 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { gravarPlanilha, type AbaGravar } from "@/lib/planilha-gravar";
 import { exigirAdmin } from "@/lib/perfil";
 import { hojeISO } from "@/lib/format";
+import { abaDe, nomeDoAssunto } from "@/lib/copia";
 
-/** Cada assunto do sistema vira uma aba da cópia de segurança. */
-const ASSUNTOS = [
-  ["clientes", "Clientes"],
-  ["fornecedores", "Fornecedores"],
-  ["parceiros", "Equipe e parceiros"],
-  ["negociacoes", "Funil de vendas"],
-  ["negociacao_notas", "Funil - anotações"],
-  ["orcamentos", "Orçamentos"],
-  ["orcamento_itens", "Orçamentos - itens"],
-  ["pedidos", "Pedidos"],
-  ["pedido_itens", "Pedidos - itens"],
-  ["pedido_marcos", "Pedidos - prazos"],
-  ["ordens_producao", "Produção"],
-  ["producao_historico", "Produção - histórico"],
-  ["produtos", "Estoque - produtos"],
-  ["movimentos_estoque", "Estoque - movimentos"],
-  ["lancamentos", "Financeiro"],
-  ["chamados", "Assistência técnica"],
-  ["configuracoes", "Configurações"],
-] as const;
+/** Assuntos que entram na planilha baixada na hora (as abas seguem esta ordem). */
+const TABELAS = [
+  "clientes", "fornecedores", "parceiros", "negociacoes", "negociacao_notas", "orcamentos", "orcamento_itens",
+  "pedidos", "pedido_itens", "pedido_marcos", "ordens_producao", "producao_historico", "produtos",
+  "movimentos_estoque", "lancamentos", "chamados", "configuracoes", "melhorias",
+];
 
 const LOTE = 1000;
 
@@ -37,7 +24,8 @@ export async function GET() {
   const supabase = await createClient();
 
   const abas: AbaGravar[] = [];
-  for (const [tabela, nome] of ASSUNTOS) {
+  for (const tabela of TABELAS) {
+    const nome = nomeDoAssunto(tabela);
     const linhas: Record<string, unknown>[] = [];
     for (let de = 0; ; de += LOTE) {
       const { data, error } = await supabase.from(tabela).select("*").range(de, de + LOTE - 1);
@@ -45,8 +33,7 @@ export async function GET() {
       linhas.push(...(data as Record<string, unknown>[]));
       if (!data || data.length < LOTE) break;
     }
-    const colunas = linhas.length ? Object.keys(linhas[0]) : ["(sem registros)"];
-    abas.push({ nome, linhas: [colunas, ...linhas.map((l) => colunas.map((c) => l[c]))] });
+    abas.push(abaDe(nome, linhas));
   }
 
   const arquivo = gravarPlanilha(abas);
