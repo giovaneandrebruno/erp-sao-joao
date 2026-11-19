@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { numero, texto, hojeISO } from "@/lib/format";
+import { exigirAdmin } from "@/lib/perfil";
 
 type StatusPedido = "aberto" | "em_producao" | "pronto" | "entregue" | "cancelado";
 
@@ -95,6 +96,7 @@ export async function atualizarMarco(pedidoId: string, marcoId: string, form: Fo
 
 /** Lança no financeiro, a pagar, a comissão do vendedor e a RT do arquiteto do pedido. */
 export async function lancarComissoes(pedidoId: string) {
+  await exigirAdmin();
   const supabase = await createClient();
   const { data: p, error: e1 } = await supabase
     .from("pedidos_resumo")

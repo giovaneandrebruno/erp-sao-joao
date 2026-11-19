@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Titulo } from "@/components/ui";
@@ -7,6 +8,7 @@ import { situacaoPrazo } from "@/lib/pcp";
 import { Icone, type NomeDoIcone } from "@/components/icones";
 
 export default async function PainelPage() {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const supabase = await createClient();
   const admin = (await perfilAtual())?.papel === "admin";
   const hoje = hojeISO();

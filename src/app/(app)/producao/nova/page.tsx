@@ -1,9 +1,11 @@
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Titulo } from "@/components/ui";
 import { hojeISO } from "@/lib/format";
 import { FormOrdem } from "../form";
 
 export default async function NovaOrdemPage({ searchParams }: PageProps<"/producao/nova">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { cliente } = await searchParams;
   const supabase = await createClient();
   const { data: clientes } = await supabase.from("clientes").select("id, nome").order("nome");

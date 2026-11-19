@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +28,7 @@ type Proposta = {
 };
 
 export default async function PropostaPublica({ params }: PageProps<"/p/[token]">) {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const { token } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(token)) notFound();
   const supabase = await createClient();

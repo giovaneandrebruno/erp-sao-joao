@@ -1,9 +1,11 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Selo, Tabela, Titulo } from "@/components/ui";
 import { ROTULOS2, data, hojeISO } from "@/lib/format";
 
 export default async function PrazosPage() {
+  await connection(); // a data de hoje muda: a tela é sempre montada na hora
   const supabase = await createClient();
   const hoje = hojeISO();
   const { data: marcos } = await supabase

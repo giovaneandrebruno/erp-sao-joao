@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { numero, texto } from "@/lib/format";
+import { exigirAdmin } from "@/lib/perfil";
 
 function dadosLancamento(form: FormData) {
   return {
@@ -19,6 +20,7 @@ function dadosLancamento(form: FormData) {
 }
 
 export async function criarLancamento(form: FormData) {
+  await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("lancamentos").insert(dadosLancamento(form));
   if (error) throw new Error(error.message);
@@ -26,6 +28,7 @@ export async function criarLancamento(form: FormData) {
 }
 
 export async function atualizarLancamento(id: string, form: FormData) {
+  await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("lancamentos").update(dadosLancamento(form)).eq("id", id);
   if (error) throw new Error(error.message);
@@ -34,6 +37,7 @@ export async function atualizarLancamento(id: string, form: FormData) {
 }
 
 export async function marcarPago(id: string, pago: boolean) {
+  await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from("lancamentos")
@@ -45,6 +49,7 @@ export async function marcarPago(id: string, pago: boolean) {
 }
 
 export async function excluirLancamento(id: string): Promise<string | null> {
+  await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("lancamentos").delete().eq("id", id);
   if (error) return `Não foi possível excluir: ${error.message}`;
