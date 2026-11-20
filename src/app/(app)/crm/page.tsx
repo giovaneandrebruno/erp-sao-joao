@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Titulo } from "@/components/ui";
-import { ETAPAS_NEGOCIACAO, ROTULOS2, brl, data, hojeISO } from "@/lib/format";
+import { ETAPAS_NEGOCIACAO, ROTULOS2, brl, data, hojeISO, linkWhats } from "@/lib/format";
 import { moverNegociacao } from "./actions";
 
 export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
@@ -56,8 +56,8 @@ export default async function CrmPage({ searchParams }: PageProps<"/crm">) {
                       <div className="mt-1 text-xs text-stone-400">{[n.origem, vend?.nome].filter(Boolean).join(" · ")}</div>
                       <div className="mt-2 flex justify-between">
                         <form action={moverNegociacao.bind(null, n.id, ETAPAS_NEGOCIACAO[Math.max(0, idx - 1)])}><button disabled={idx === 0} className="rounded px-2 text-stone-500 hover:bg-stone-100 disabled:opacity-30">←</button></form>
-                        {cli?.telefone && (
-                          <a href={`https://wa.me/55${cli.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-xs text-green-700 hover:underline">WhatsApp</a>
+                        {linkWhats(cli?.telefone) && (
+                          <a href={linkWhats(cli?.telefone)!} target="_blank" rel="noreferrer" className="text-xs text-green-700 hover:underline">WhatsApp</a>
                         )}
                         <form action={moverNegociacao.bind(null, n.id, ETAPAS_NEGOCIACAO[Math.min(5, idx + 1)])}><button disabled={idx >= 5} className="rounded px-2 text-stone-500 hover:bg-stone-100 disabled:opacity-30">→</button></form>
                       </div>

@@ -109,8 +109,12 @@ export function hojeISO(somarDias = 0) {
   return d.toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 }
 
-/** Link do WhatsApp com mensagem pronta. Aceita telefone com ou sem DDI. */
+/** Botões de WhatsApp desligados até o envio ser configurado. Troque para true para mostrá-los de novo. */
+export const WHATSAPP_LIGADO = false;
+
+/** Link do WhatsApp com mensagem pronta. Aceita telefone com ou sem DDI. Sem botão enquanto WHATSAPP_LIGADO for false. */
 export function linkWhats(telefone: string | null | undefined, mensagem?: string) {
+  if (!WHATSAPP_LIGADO) return null;
   const n = String(telefone ?? "").replace(/\D/g, "");
   if (n.length < 10) return null;
   const numeroCompleto = n.length <= 11 ? `55${n}` : n;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Titulo, inputCls } from "@/components/ui";
-import { ROTULOS2, data } from "@/lib/format";
+import { ROTULOS2, data, linkWhats } from "@/lib/format";
 import { adicionarNota, atualizarNegociacao, gerarOrcamento } from "../actions";
 import { CamposNegociacao } from "../campos";
 
@@ -30,7 +30,7 @@ export default async function NegociacaoPage({ params }: PageProps<"/crm/[id]">)
       </Titulo>
       <p className="mb-6 text-sm text-stone-600">
         <Link href={`/clientes/${cli.id}`} className="text-madeira-700 hover:underline">ver cadastro</Link>
-        {cli.telefone && <> · {cli.telefone} · <a className="text-green-700 hover:underline" target="_blank" rel="noreferrer" href={`https://wa.me/55${cli.telefone.replace(/\D/g, "")}`}>abrir WhatsApp</a></>}
+        {cli.telefone && <> · {cli.telefone}{linkWhats(cli.telefone) && <> · <a className="text-green-700 hover:underline" target="_blank" rel="noreferrer" href={linkWhats(cli.telefone)!}>abrir WhatsApp</a></>}</>}
         {cli.email && <> · {cli.email}</>}
       </p>
 
