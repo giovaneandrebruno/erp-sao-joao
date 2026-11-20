@@ -8,13 +8,15 @@ import { NAVEGACAO, localizar, type Aba, type Secao } from "@/lib/navegacao";
 import { Icone } from "@/components/icones";
 import { abrirBusca } from "./paleta";
 
-/** Menu com as abas que o perfil pode abrir (as abas sem nenhuma sub-aba liberada somem). */
+/** Menu com as abas que o perfil pode abrir (as abas sem nenhuma sub-aba liberada somem), em ordem alfabética dentro de cada seção. */
 export function menuDoPapel(papel: Papel): Secao[] {
   return NAVEGACAO.map((s) => ({
     ...s,
     abas: s.abas
       .map((a) => ({ ...a, filhos: a.filhos?.filter((f) => podeAbrir(papel, f.href.split("?")[0])) }))
-      .filter((a) => (a.href ? podeAbrir(papel, a.href) : (a.filhos?.length ?? 0) > 0)),
+      .filter((a) => (a.href ? podeAbrir(papel, a.href) : (a.filhos?.length ?? 0) > 0))
+      // dentro de cada seção, as abas ficam em ordem alfabética
+      .sort((x, y) => x.rotulo.localeCompare(y.rotulo, "pt-BR")),
   })).filter((s) => s.abas.length);
 }
 
