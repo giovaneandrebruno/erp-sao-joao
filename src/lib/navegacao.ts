@@ -1,6 +1,7 @@
 /**
  * Menu do sistema: seções, abas e sub-abas.
- * Uma aba com "filhos" abre e fecha no menu lateral; sem filhos, é um link direto.
+ * Uma aba com "filhos" vira um título no menu lateral, com as sub-abas sempre à vista logo abaixo;
+ * sem filhos, é um link direto.
  * Também alimenta o caminho no topo da tela e a busca rápida (Ctrl+K).
  */
 export type Icone =
@@ -23,6 +24,7 @@ export const NAVEGACAO: Secao[] = [
           { href: "/crm", rotulo: "Funil de vendas", dica: "Negociações por etapa" },
           { href: "/orcamentos", rotulo: "Orçamentos", dica: "Propostas e aprovações" },
           { href: "/comissoes", rotulo: "Comissões", dica: "Vendedores e arquitetos" },
+          { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
       { rotulo: "Clientes", icone: "clientes", href: "/clientes" },
@@ -37,7 +39,6 @@ export const NAVEGACAO: Secao[] = [
         filhos: [
           { href: "/pedidos", rotulo: "Todos os pedidos" },
           { href: "/prazos", rotulo: "Prazos", dica: "Marcos atrasados e próximos" },
-          { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
       {
