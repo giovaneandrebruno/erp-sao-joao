@@ -8,7 +8,9 @@ import { abaDe, nomeDoAssunto } from "@/lib/copia";
 const TABELAS = [
   "clientes", "fornecedores", "parceiros", "negociacoes", "negociacao_notas", "orcamentos", "orcamento_itens",
   "pedidos", "pedido_itens", "pedido_marcos", "ordens_producao", "producao_historico", "produtos",
-  "movimentos_estoque", "lancamentos", "chamados", "configuracoes", "melhorias",
+  "movimentos_estoque", "pedido_materiais", "retalhos", "inventarios", "inventario_itens", "requisicoes_compra",
+  "cotacoes", "cotacao_itens", "cotacao_fornecedores", "cotacao_precos", "compras", "compra_itens", "recebimentos",
+  "lancamentos", "chamados", "configuracoes", "melhorias",
 ];
 
 const LOTE = 1000;

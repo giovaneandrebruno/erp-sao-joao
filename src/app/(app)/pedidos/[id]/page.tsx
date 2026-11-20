@@ -200,6 +200,7 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           <p className="text-xs text-stone-500">Chapas, fitas e ferragens que o pedido vai usar. Ficam reservados no estoque e saem sozinhos quando o pedido entra em produção.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/estoque/calcular?pedido=${id}`} className={estiloBotao.secundario}>Calcular material</Link>
           <JanelaBotao rotulo="Importar planilha" titulo="Importar materiais da planilha" descricao={`Pedido #${p.numero} · arquivo .xlsx`} variante="secundario" icone="importar" largura="md" aviso={null}>
             <ImportarMateriais pedidoId={id} produtos={catalogo ?? []} />
           </JanelaBotao>

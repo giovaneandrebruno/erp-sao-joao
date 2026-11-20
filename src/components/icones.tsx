@@ -8,6 +8,7 @@ const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair"
   pedidos: "M9 4h6v3H9zM7 5.5H5.5A1.5 1.5 0 0 0 4 7v12.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H17M8.5 12h7M8.5 16h5",
   producao: "M3 21V10l5 3V10l5 3V7l8 4v10zM7 17h2M12 17h2M17 17h1",
   estoque: "M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8",
+  compras: "M3 4h2.5l2.2 11h10.6L20.5 8H7M9.5 19.5a1 1 0 1 0 0 .01M17 19.5a1 1 0 1 0 0 .01",
   financeiro: "M3 21h18M5 21V10M19 21V10M9.5 21v-7M14.5 21v-7M2.5 10 12 4l9.5 6z",
   analises: "M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6",
   equipe: "M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6zM9 12l2 2 4-4",
