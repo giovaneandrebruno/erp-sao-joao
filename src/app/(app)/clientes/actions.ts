@@ -70,6 +70,9 @@ export async function salvarCliente(id: string | null, form: FormData) {
     : await supabase.from("clientes").insert(registro).select("id").single();
   if (error) throw new Error(error.message);
   revalidatePath("/clientes");
+  revalidatePath(`/clientes/${data.id}`);
+  // alterado na janela da lista: continua na lista
+  if (texto(form, "ficar_na_lista")) return;
   redirect(`/clientes/${data.id}`);
 }
 

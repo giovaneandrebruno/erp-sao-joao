@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Tabela, Titulo, VerMais, estiloBotao, inputCls, quantidadeDaLista } from "@/components/ui";
 import { SITUACOES, digitos, type Situacao } from "@/lib/cliente";
 import { SeletorSituacao } from "./situacao";
+import { FormCliente } from "./form";
+import { excluirCliente } from "./actions";
+import { AcoesLinha, BotaoExcluir, JanelaEditar, LinkEditar } from "@/components/acoes";
 
 export default async function ClientesPage({ searchParams }: PageProps<"/clientes">) {
   const sp = await searchParams;
@@ -27,6 +30,13 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
   }
   if (situacao) consulta = consulta.eq("situacao", situacao);
   const { data: clientes = [], count } = await consulta;
+  const editar = typeof sp.editar === "string" ? sp.editar : null;
+  const [{ data: emEdicao }, { data: parceiros }] = editar
+    ? await Promise.all([
+        supabase.from("clientes").select("*").eq("id", editar).maybeSingle(),
+        supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
+      ])
+    : [{ data: null }, { data: null }];
 
   return (
     <>
@@ -39,7 +49,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
         </select>
         <button className={estiloBotao.secundario}>Filtrar</button>
       </form>
-      <Tabela cabecalho={["Nome", "Situação", "Telefone", "Endereço", "Cidade"]} vazio={!clientes?.length}>
+      <Tabela cabecalho={["Nome", "Situação", "Telefone", "Endereço", "Cidade", ""]} vazio={!clientes?.length}>
         {clientes?.map((c) => {
           const s = (c.situacao ?? "lead") as Situacao;
           return (
@@ -49,10 +59,26 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
               <td className="px-4 py-3">{c.telefone ?? "—"}</td>
               <td className="px-4 py-3">{[[c.endereco, c.numero, c.complemento].filter(Boolean).join(", "), c.bairro].filter(Boolean).join(" - ") || "—"}</td>
               <td className="px-4 py-3">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
+              <td className="px-4 py-2">
+                <AcoesLinha>
+                  <LinkEditar id={c.id} />
+                  <BotaoExcluir
+                    acao={excluirCliente.bind(null, c.id)}
+                    titulo="Excluir este cliente?"
+                    detalhe={<strong>{c.nome}</strong>}
+                    aviso="Cliente excluído"
+                  />
+                </AcoesLinha>
+              </td>
             </tr>
           );
         })}
       </Tabela>
+      {emEdicao && (
+        <JanelaEditar key={emEdicao.id} titulo="Editar cliente" descricao={emEdicao.nome} aviso="Cliente salvo" largura="xl">
+          <FormCliente cliente={emEdicao} parceiros={parceiros ?? []} naLista />
+        </JanelaEditar>
+      )}
       <VerMais mostrando={clientes?.length ?? 0} total={count} rotulo="clientes" parametros={sp} />
     </>
   );

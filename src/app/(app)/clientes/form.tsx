@@ -14,7 +14,7 @@ const secaoCls = "md:col-span-6 mt-2 border-t border-stone-100 pt-4 text-[11px] 
 /** Formata o campo quando a pessoa sai dele (ex.: 11999998888 → (11) 99999-8888). */
 const ao = (f: (v: string) => string) => (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.value = f(e.currentTarget.value); };
 
-export function FormCliente({ cliente, parceiros = [] }: { cliente?: Cliente; parceiros?: Pessoa[] }) {
+export function FormCliente({ cliente, parceiros = [], naLista = false }: { cliente?: Cliente; parceiros?: Pessoa[]; naLista?: boolean }) {
   const v = (k: string) => cliente?.[k] ?? "";
   const [tipo, setTipo] = useState(v("tipo_pessoa") || "fisica");
   const [avisoDoc, setAvisoDoc] = useState<string | null>(null);
@@ -41,6 +41,7 @@ export function FormCliente({ cliente, parceiros = [] }: { cliente?: Cliente; pa
 
   return (
     <form action={salvarCliente.bind(null, cliente?.id ?? null)} className="grid gap-4 md:grid-cols-6">
+      {naLista && <input type="hidden" name="ficar_na_lista" value="1" />}
       <p className={secaoCls}>Situação</p>
       <Campo rotulo="Situação" className="md:col-span-2">
         <select name="situacao" defaultValue={v("situacao") || "lead"} className={inputCls}>
