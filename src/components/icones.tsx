@@ -1,7 +1,7 @@
 import type { Icone as NomeIcone } from "@/lib/navegacao";
 
 /** Ícones de traço fino (24×24), desenhados aqui mesmo para não depender de biblioteca. */
-const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair" | "chave" | "raio" | "documento" | "caixa" | "pessoa" | "enter" | "menu" | "sino" | "lapis" | "lixeira" | "certo" | "alerta", string> = {
+const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair" | "chave" | "raio" | "documento" | "pasta" | "caixa" | "pessoa" | "enter" | "menu" | "sino" | "lapis" | "lixeira" | "certo" | "alerta", string> = {
   painel: "M4 4h6v7H4zM14 4h6v4h-6zM14 12h6v8h-6zM4 15h6v5H4z",
   vendas: "M3 4h18l-7 8v6l-4 2v-8z",
   clientes: "M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7",
@@ -22,6 +22,7 @@ const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair"
   chave: "M15 9a3 3 0 1 0-3 3M12 12l-8 8M7 17l2 2M5 19l1.5 1.5M15 3a6 6 0 1 1-5.2 9",
   raio: "M13 3 5 13h6l-1 8 8-10h-6z",
   documento: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4",
+  pasta: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
   caixa: "M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8",
   pessoa: "M18 20v-1a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
   enter: "M20 5v7a3 3 0 0 1-3 3H6M10 11l-4 4 4 4",
