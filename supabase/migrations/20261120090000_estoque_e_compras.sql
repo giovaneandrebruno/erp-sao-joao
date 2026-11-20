@@ -342,6 +342,8 @@ begin
   end loop;
 end $$;
 revoke all on public.produtos_saldo from anon;
+grant usage, select on sequence public.inventarios_numero_seq, public.cotacoes_numero_seq,
+  public.compras_numero_seq, public.requisicoes_compra_numero_seq to authenticated;
 
 revoke execute on function public.concluir_inventario(uuid) from public, anon;
 grant execute on function public.concluir_inventario(uuid) to authenticated;

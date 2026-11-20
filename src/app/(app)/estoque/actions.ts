@@ -42,7 +42,7 @@ export async function registrarMovimento(produtoId: string, form: FormData) {
     quantidade: numero(form, "quantidade") ?? 0,
     custo_unitario: numero(form, "custo_unitario"),
     referencia: texto(form, "referencia"),
-    origem: (texto(form, "origem") ?? "manual") as "manual" | "perda" | "devolucao",
+    origem: (["perda", "devolucao"].includes(texto(form, "origem") ?? "") ? texto(form, "origem") : "manual") as "manual" | "perda" | "devolucao",
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/estoque/${produtoId}`);
