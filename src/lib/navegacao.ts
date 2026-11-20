@@ -5,7 +5,7 @@
  * Também alimenta o caminho no topo da tela e a busca rápida (Ctrl+K).
  */
 export type Icone =
-  | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque"
+  | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
   | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
@@ -51,12 +51,27 @@ export const NAVEGACAO: Secao[] = [
         ],
       },
       {
-        rotulo: "Estoque e compras",
+        rotulo: "Estoque",
         icone: "estoque",
         filhos: [
-          { href: "/estoque", rotulo: "Produtos e saldo" },
-          { href: "/compras", rotulo: "Lista de compras", dica: "O que falta para os pedidos" },
+          { href: "/estoque", rotulo: "Saldo", dica: "Quanto tem, quanto está reservado e quanto está livre" },
+          { href: "/estoque/movimentos", rotulo: "Movimentações", dica: "Entradas, saídas e ajustes" },
+          { href: "/estoque/reservas", rotulo: "Reservas por pedido", dica: "Material separado para cada pedido" },
+          { href: "/estoque/calcular", rotulo: "Calcular material", dica: "Chapas, fita e ferragens a partir das peças" },
+          { href: "/estoque/consumo", rotulo: "Consumo por cliente", dica: "Material usado e comprado para cada cliente" },
+          { href: "/estoque/inventario", rotulo: "Inventário", dica: "Contagem do estoque e ajuste do saldo" },
           { href: "/estoque/sobras", rotulo: "Sobras de chapa", dica: "Retalhos para reaproveitar" },
+        ],
+      },
+      {
+        rotulo: "Compras",
+        icone: "compras",
+        filhos: [
+          { href: "/compras", rotulo: "O que comprar", dica: "Falta para pedidos e abaixo do mínimo" },
+          { href: "/compras/requisicoes", rotulo: "Requisições", dica: "Pedidos de material feitos pela equipe" },
+          { href: "/compras/cotacoes", rotulo: "Cotações", dica: "Comparar preço e prazo entre fornecedores" },
+          { href: "/compras/pedidos", rotulo: "Pedidos de compra", dica: "O que foi comprado de cada fornecedor" },
+          { href: "/compras/recebimento", rotulo: "Recebimento", dica: "Conferir o que chegou e dar entrada no estoque" },
           { href: "/fornecedores", rotulo: "Fornecedores" },
         ],
       },
@@ -113,6 +128,8 @@ export const ACOES_RAPIDAS: Folha[] = [
   { href: "/orcamentos/novo", rotulo: "Novo orçamento" },
   { href: "/producao/nova", rotulo: "Nova ordem de serviço (produção)" },
   { href: "/estoque/novo", rotulo: "Cadastrar produto" },
+  { href: "/compras/requisicoes?novo=1", rotulo: "Nova requisição de compra" },
+  { href: "/compras/pedidos?novo=1", rotulo: "Novo pedido de compra" },
   { href: "/financeiro?novo=1", rotulo: "Novo lançamento financeiro" },
 ];
 

@@ -126,6 +126,7 @@ export const AREAS: Record<Area, DefinicaoArea> = {
       { chave: "preco_venda", rotulo: "Preço de venda", tipo: "numero", reconhece: /venda|pre[cç]o|valor/i },
       { chave: "estoque_atual", rotulo: "Saldo em estoque", tipo: "numero", reconhece: /saldo|estoque|qtd|quant|atual/i },
       { chave: "estoque_minimo", rotulo: "Estoque mínimo", tipo: "numero", reconhece: /m[ií]nim/i },
+      { chave: "local", rotulo: "Local no depósito", tipo: "texto", reconhece: /^local|prateleira|endere[cç]o|posi[cç]/i },
     ],
   },
   financeiro: {

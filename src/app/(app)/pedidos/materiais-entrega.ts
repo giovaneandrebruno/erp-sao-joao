@@ -9,6 +9,7 @@ function atualizar(pedidoId: string) {
   revalidatePath("/estoque");
   revalidatePath("/compras");
   revalidatePath("/producao");
+  revalidatePath("/estoque/reservas");
 }
 
 // ───────────────────────── materiais do pedido ─────────────────────────
