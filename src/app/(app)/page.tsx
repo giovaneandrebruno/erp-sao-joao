@@ -84,6 +84,33 @@ export default async function PainelPage() {
       whats: linkWhats(cliente?.telefone, `Olá, ${cliente?.nome?.split(" ")[0] ?? ""}! Vi que você abriu a nossa proposta nº ${o.numero}. Ficou alguma dúvida? Posso te ajudar a fechar os detalhes.`),
     };
   });
+  // orçamentos enviados que vencem logo, já venceram ou estão sem resposta há muitos dias
+  const { data: cfgPainel } = await supabase.from("configuracoes").select("orcamento_parado_dias").single();
+  const diasParado = Number(cfgPainel?.orcamento_parado_dias ?? 7);
+  const { data: enviadosBrutos } = await supabase
+    .from("orcamentos")
+    .select("id, numero, validade, criado_em, atualizado_em, ultima_abertura_em, clientes(nome, telefone)")
+    .eq("status", "enviado")
+    .order("validade", { nullsFirst: false })
+    .limit(300);
+  const atencao = (enviadosBrutos ?? [])
+    .map((o) => {
+      const cliente = o.clientes as unknown as { nome: string; telefone: string | null } | null;
+      const ultimo = String(o.ultima_abertura_em ?? o.atualizado_em ?? o.criado_em);
+      const semResposta = Math.floor((agora - Date.parse(ultimo)) / 86_400_000);
+      const diasValidade = o.validade ? Math.round((Date.parse(o.validade) - Date.parse(hoje)) / 86_400_000) : null;
+      const motivo =
+        diasValidade !== null && diasValidade < 0 ? `venceu em ${data(o.validade)}`
+        : diasValidade !== null && diasValidade <= 3 ? (diasValidade === 0 ? "vence hoje" : `vence em ${diasValidade} dia${diasValidade > 1 ? "s" : ""}`)
+        : semResposta >= diasParado ? `sem resposta há ${semResposta} dias`
+        : null;
+      const texto = diasValidade !== null && diasValidade < 0
+        ? `Olá, ${cliente?.nome?.split(" ")[0] ?? ""}! A proposta nº ${o.numero} venceu, mas ainda dá para conversar. Quer que eu atualize os valores para você?`
+        : `Olá, ${cliente?.nome?.split(" ")[0] ?? ""}! Passando para saber se ficou alguma dúvida na proposta nº ${o.numero}.${o.validade ? ` Ela vale até ${data(o.validade)}.` : ""}`;
+      return { id: o.id, numero: o.numero, cliente, motivo, vencido: diasValidade !== null && diasValidade < 0, whats: linkWhats(cliente?.telefone, texto) };
+    })
+    .filter((o) => o.motivo)
+    .slice(0, 8);
   const haQuanto = (m: number) => (m < 1 ? "agora mesmo" : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.floor(m / 60)} h` : "ontem");
 
   // resumo de ontem (só o administrador)
@@ -196,6 +223,24 @@ export default async function PainelPage() {
         ))}
       </div>
 
+      {atencao.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Orçamentos para dar atenção</h2>
+          <Cartao className="filete">
+            <ul className={lista}>
+              {atencao.map((o) => (
+                <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                  <Link href={`/orcamentos/${o.id}`} className="text-stone-800 transition hover:text-ciano">
+                    <span className="font-mono font-semibold text-violeta">#{o.numero}</span> {o.cliente?.nome ?? "Cliente"}
+                    <span className={o.vencido ? "text-rosa" : "text-stone-500"}> · {o.motivo}</span>
+                  </Link>
+                  {o.whats && <a href={o.whats} target="_blank" rel="noreferrer" className="text-xs font-semibold text-laranja hover:underline">Chamar no WhatsApp</a>}
+                </li>
+              ))}
+            </ul>
+          </Cartao>
+        </section>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Retornos para hoje</h2>

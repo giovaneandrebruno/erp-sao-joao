@@ -64,7 +64,15 @@ function FormLancamento({ id, l = {}, hoje, fornecedores, clientes }: { id?: str
       <Campo rotulo="Forma de pagamento" className="md:col-span-2">
         <input name="forma_pagamento" defaultValue={l.forma_pagamento ?? ""} className={inputCls} />
       </Campo>
-      <div className={`flex items-end gap-2 ${id ? "md:col-span-12" : "md:col-span-2"}`}><Botao type="submit">{id ? "Salvar alterações" : "Lançar"}</Botao>{id && <BotaoCancelar />}</div>
+      {!id && (
+        <Campo rotulo="Repetir todo mês" className="md:col-span-2">
+          <select name="repetir" defaultValue="1" className={inputCls}>
+            <option value="1">Não repete</option>
+            {[2, 3, 6, 12, 24].map((n) => <option key={n} value={n}>Por {n} meses</option>)}
+          </select>
+        </Campo>
+      )}
+      <div className="flex items-end gap-2 md:col-span-12"><Botao type="submit">{id ? "Salvar alterações" : "Lançar"}</Botao>{id && <BotaoCancelar />}</div>
     </form>
   );
 }

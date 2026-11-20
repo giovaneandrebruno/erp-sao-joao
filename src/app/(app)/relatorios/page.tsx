@@ -35,10 +35,12 @@ export default async function RelatoriosPage({ searchParams }: PageProps<"/relat
     qCaixa = qCaixa.eq("unidade", unidade);
     qNeg = qNeg.eq("unidade", unidade);
   }
-  const [{ data: pedidos12 }, { data: caixa }, { data: negs }, { data: vendedores }] = await Promise.all([
+  const [{ data: pedidos12 }, { data: caixa }, { data: negs }, { data: vendedores }, { data: pesquisas }] = await Promise.all([
     qPed, qCaixa, qNeg,
     supabase.from("parceiros").select("id, nome").eq("tipo", "vendedor"),
+    supabase.from("pedidos").select("satisfacao_nota").not("satisfacao_nota", "is", null).gte("satisfacao_em", hojeISO(-365)),
   ]);
+  const notas = (pesquisas ?? []).map((x) => Number(x.satisfacao_nota));
 
   const doMes = (pedidos12 ?? []).filter((p) => p.criado_em >= inicio);
   const vendido = doMes.reduce((s, p) => s + Number(p.total), 0);
@@ -171,6 +173,19 @@ export default async function RelatoriosPage({ searchParams }: PageProps<"/relat
                 {motivos.map(([mot, n]) => <li key={mot} className="flex justify-between py-2"><span>{mot}</span><span className="font-mono text-stone-500">{n}</span></li>)}
               </ul>
             ) : <p className="text-sm text-stone-400">Nenhuma venda perdida registrada.</p>}
+          </Cartao>
+        </section>
+        <section>
+          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500">Satisfação dos clientes · últimos 12 meses</h2>
+          <Cartao>
+            {notas.length ? (
+              <ul className="divide-y divide-stone-100 text-sm">
+                <li className="flex justify-between py-2"><span>Nota média</span><span className="font-mono font-semibold">{(notas.reduce((a, n) => a + n, 0) / notas.length).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</span></li>
+                <li className="flex justify-between py-2"><span>Recomendam (9 e 10)</span><span className="font-mono text-stone-500">{notas.filter((n) => n >= 9).length}</span></li>
+                <li className="flex justify-between py-2"><span>Neutros (7 e 8)</span><span className="font-mono text-stone-500">{notas.filter((n) => n === 7 || n === 8).length}</span></li>
+                <li className="flex justify-between py-2"><span>Insatisfeitos (0 a 6)</span><span className="font-mono text-stone-500">{notas.filter((n) => n <= 6).length}</span></li>
+              </ul>
+            ) : <p className="text-sm text-stone-400">Nenhuma nota registrada. Peça a nota no pedido entregue.</p>}
           </Cartao>
         </section>
       </div>

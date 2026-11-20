@@ -55,6 +55,8 @@ export const NAVEGACAO: Secao[] = [
         icone: "estoque",
         filhos: [
           { href: "/estoque", rotulo: "Produtos e saldo" },
+          { href: "/compras", rotulo: "Lista de compras", dica: "O que falta para os pedidos" },
+          { href: "/estoque/sobras", rotulo: "Sobras de chapa", dica: "Retalhos para reaproveitar" },
           { href: "/fornecedores", rotulo: "Fornecedores" },
         ],
       },
@@ -71,6 +73,7 @@ export const NAVEGACAO: Secao[] = [
           { href: "/financeiro?tipo=receber", rotulo: "A receber" },
           { href: "/financeiro?tipo=pagar", rotulo: "A pagar" },
           { href: "/financeiro?situacao=vencidos", rotulo: "Vencidos" },
+          { href: "/financeiro/extrato", rotulo: "Conferir com o extrato", dica: "Marca como pago o que já caiu no banco" },
         ],
       },
       {
