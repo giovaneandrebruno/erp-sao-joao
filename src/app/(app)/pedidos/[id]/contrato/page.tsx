@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ROTULOS2, brl, data } from "@/lib/format";
 import { BotaoImprimir } from "./botao";
+import { qualificacaoCliente } from "@/lib/cliente";
 
 export default async function ContratoPage({ params }: PageProps<"/pedidos/[id]/contrato">) {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -30,7 +31,7 @@ export default async function ContratoPage({ params }: PageProps<"/pedidos/[id]/
       </div>
 
       <p className="mb-3"><strong>CONTRATADA:</strong> {cfg?.razao_social || cfg?.nome_fantasia}{cfg?.cnpj ? `, CNPJ ${cfg.cnpj}` : ""}{cfg?.endereco ? `, ${cfg.endereco}` : ""}{cfg?.cidade ? `, ${cfg.cidade}/${cfg.uf ?? ""}` : ""}.</p>
-      <p className="mb-6"><strong>CONTRATANTE:</strong> {cliente?.nome}{cliente?.cpf_cnpj ? `, CPF/CNPJ ${cliente.cpf_cnpj}` : ""}{cliente?.endereco ? `, ${cliente.endereco}` : ""}{cliente?.cidade ? `, ${cliente.cidade}/${cliente.uf ?? ""}` : ""}{cliente?.telefone ? `, telefone ${cliente.telefone}` : ""}.</p>
+      <p className="mb-6"><strong>CONTRATANTE:</strong> {qualificacaoCliente(cliente)}.</p>
 
       <h2 className="mb-2 font-semibold">Objeto</h2>
       <p className="mb-2">Fabricação, entrega e montagem dos móveis planejados abaixo, conforme projeto aprovado pelo CONTRATANTE.</p>
