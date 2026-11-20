@@ -10,11 +10,13 @@ import { excluirCliente } from "../actions";
 import { SeletorSituacao } from "../situacao";
 import { BotaoExcluir } from "@/components/acoes";
 import { SeloStatus } from "../../producao/componentes";
+import { PastaDoCliente } from "./pasta";
+import { BUCKET_DOCUMENTOS } from "@/lib/documentos";
 
 export default async function ClientePage({ params }: PageProps<"/clientes/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: cliente }, { data: orcamentos }, { data: pedidos }, { data: ordens }, { data: negociacoes }, { data: lancamentos }, { data: parceiros }] = await Promise.all([
+  const [{ data: cliente }, { data: orcamentos }, { data: pedidos }, { data: ordens }, { data: negociacoes }, { data: lancamentos }, { data: parceiros }, { data: documentos }, { data: anotacoes }, { data: briefing }] = await Promise.all([
     supabase.from("clientes").select("*").eq("id", id).maybeSingle(),
     supabase.from("orcamentos_resumo").select("id, numero, status, total, criado_em").eq("cliente_id", id).order("numero", { ascending: false }),
     supabase.from("pedidos_resumo").select("id, numero, status, total, data_entrega_prevista, criado_em").eq("cliente_id", id).order("numero", { ascending: false }),
@@ -22,8 +24,15 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
     supabase.from("negociacoes").select("id, titulo, etapa, valor_estimado, proxima_acao, proxima_acao_data").eq("cliente_id", id).order("criado_em", { ascending: false }),
     supabase.from("lancamentos").select("id, descricao, valor, vencimento, pago_em, pedido_id").eq("cliente_id", id).eq("tipo", "receber").order("vencimento"),
     supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
+    supabase.from("cliente_documentos").select("id, tipo, descricao, nome_arquivo, caminho, tamanho, enviado_por_nome, atualizado_em").eq("cliente_id", id).order("criado_em", { ascending: false }),
+    supabase.from("cliente_anotacoes").select("id, texto, criado_por_nome, alterado_por_nome, criado_em, atualizado_em").eq("cliente_id", id).order("criado_em", { ascending: false }),
+    supabase.from("cliente_briefing").select("respostas, preenchido_por_nome, alterado_por_nome, criado_em, atualizado_em").eq("cliente_id", id).maybeSingle(),
   ]);
   if (!cliente) notFound();
+  // links para abrir os arquivos da pasta privada (valem 1 hora)
+  const caminhos = (documentos ?? []).map((d) => d.caminho);
+  const { data: links } = caminhos.length ? await supabase.storage.from(BUCKET_DOCUMENTOS).createSignedUrls(caminhos, 3600) : { data: [] };
+  const docsComLink = (documentos ?? []).map((d, i) => ({ ...d, url: links?.[i]?.signedUrl ?? null }));
 
   const situacao = (cliente.situacao ?? "lead") as Situacao;
   const pj = cliente.tipo_pessoa === "juridica";
@@ -129,6 +138,8 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
           ))}
         </div>
       </Cartao>
+
+      <PastaDoCliente clienteId={id} nome={cliente.nome} documentos={docsComLink} anotacoes={anotacoes ?? []} briefing={briefing} />
 
       {!!negociacoes?.length && (
         <>
