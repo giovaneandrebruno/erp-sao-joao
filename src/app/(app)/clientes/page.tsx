@@ -1,33 +1,58 @@
 import Link from "next/link";
 import { FerramentasImportacao } from "@/components/importador";
 import { createClient } from "@/lib/supabase/server";
-import { BotaoLink, Tabela, Titulo, VerMais, inputCls, quantidadeDaLista } from "@/components/ui";
+import { BotaoLink, Selo, Tabela, Titulo, VerMais, estiloBotao, inputCls, quantidadeDaLista } from "@/components/ui";
+import { COR_SITUACAO, ROTULO_CURTO_SITUACAO, SITUACOES, digitos, type Situacao } from "@/lib/cliente";
 
 export default async function ClientesPage({ searchParams }: PageProps<"/clientes">) {
   const sp = await searchParams;
   const { busca } = sp;
+  const situacao = typeof sp.situacao === "string" && Object.hasOwn(SITUACOES, sp.situacao) ? (sp.situacao as Situacao) : null;
   const qtd = quantidadeDaLista(sp.qtd);
   const termo = typeof busca === "string" ? busca.trim() : "";
   const supabase = await createClient();
-  let consulta = supabase.from("clientes").select("id, nome, telefone, cidade, uf", { count: "exact" }).order("nome").limit(qtd);
-  const seguro = termo.replace(/[,()%*]/g, " ");
-  if (seguro) consulta = consulta.or(`nome.ilike.%${seguro}%,telefone.ilike.%${seguro}%,cpf_cnpj.ilike.%${seguro}%`);
+  let consulta = supabase
+    .from("clientes")
+    .select("id, nome, telefone, cidade, uf, situacao, origem", { count: "exact" })
+    .order("nome")
+    .limit(qtd);
+  const seguro = termo.replace(/[,()%*"\\]/g, " ").trim();
+  if (seguro) {
+    const filtros = [`nome.ilike.%${seguro}%`, `nome_fantasia.ilike.%${seguro}%`, `telefone.ilike.%${seguro}%`, `email.ilike.%${seguro}%`, `cpf_cnpj.ilike.%${seguro}%`];
+    // CPF/CNPJ digitado só com números também acha o cadastro escrito com pontos
+    const doc = digitos(seguro);
+    if (doc.length >= 3 && /^[\d\s./-]+$/.test(seguro)) filtros.push(`cpf_cnpj.ilike.%${doc.split("").join("%")}%`);
+    consulta = consulta.or(filtros.join(","));
+  }
+  if (situacao) consulta = consulta.eq("situacao", situacao);
   const { data: clientes = [], count } = await consulta;
 
   return (
     <>
       <Titulo acao={<FerramentasImportacao area="clientes" extra={<BotaoLink href="/clientes/novo">Novo cliente</BotaoLink>} />}>Clientes</Titulo>
-      <form className="mb-4">
-        <input name="busca" defaultValue={termo} placeholder="Buscar por nome, telefone ou CPF/CNPJ" className={`${inputCls} w-full max-w-md`} />
+      <form className="mb-4 flex flex-wrap gap-2">
+        <input name="busca" defaultValue={termo} placeholder="Buscar por nome, telefone, e-mail ou CPF/CNPJ" className={`${inputCls} w-full max-w-md`} />
+        <select name="situacao" defaultValue={situacao ?? ""} className={inputCls}>
+          <option value="">Leads e clientes</option>
+          <option value="lead">Só leads (ainda não fecharam)</option>
+          <option value="cliente">Só clientes (já fecharam)</option>
+          <option value="inativo">Só inativos</option>
+        </select>
+        <button className={estiloBotao.secundario}>Filtrar</button>
       </form>
-      <Tabela cabecalho={["Nome", "Telefone", "Cidade"]} vazio={!clientes?.length}>
-        {clientes?.map((c) => (
-          <tr key={c.id} className="hover:bg-stone-50">
-            <td className="px-4 py-3"><Link href={`/clientes/${c.id}`} className="font-medium text-madeira-800 hover:underline">{c.nome}</Link></td>
-            <td className="px-4 py-3">{c.telefone ?? "—"}</td>
-            <td className="px-4 py-3">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
-          </tr>
-        ))}
+      <Tabela cabecalho={["Nome", "Situação", "Telefone", "Cidade", "Origem"]} vazio={!clientes?.length}>
+        {clientes?.map((c) => {
+          const s = (c.situacao ?? "lead") as Situacao;
+          return (
+            <tr key={c.id} className="hover:bg-stone-50">
+              <td className="px-4 py-3"><Link href={`/clientes/${c.id}`} className="font-medium text-madeira-800 hover:underline">{c.nome}</Link></td>
+              <td className="px-4 py-3"><Selo cor={COR_SITUACAO[s]}>{ROTULO_CURTO_SITUACAO[s]}</Selo></td>
+              <td className="px-4 py-3">{c.telefone ?? "—"}</td>
+              <td className="px-4 py-3">{c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}</td>
+              <td className="px-4 py-3">{c.origem ?? "—"}</td>
+            </tr>
+          );
+        })}
       </Tabela>
       <VerMais mostrando={clientes?.length ?? 0} total={count} rotulo="clientes" parametros={sp} />
     </>

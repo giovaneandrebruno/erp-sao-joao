@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { brl, data } from "@/lib/format";
 import { BotaoImprimir } from "./botao";
+import { enderecoCompleto } from "@/lib/cliente";
 
 export default async function ImprimirOrcamento({ params }: PageProps<"/orcamentos/[id]/imprimir">) {
   const { id } = await params;
@@ -35,7 +36,8 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
       <div className="mb-6">
         <div className="font-semibold">{cliente?.nome}</div>
         {cliente?.telefone && <div>{cliente.telefone}</div>}
-        {cliente?.endereco && <div>{cliente.endereco}{cliente.cidade ? ` — ${cliente.cidade}/${cliente.uf ?? ""}` : ""}</div>}
+        {enderecoCompleto(cliente) && <div>{enderecoCompleto(cliente)}</div>}
+        {cliente?.endereco_obra && <div>Obra / entrega: {cliente.endereco_obra}</div>}
       </div>
       <table className="mb-4 w-full">
         <thead className="border-b text-left text-stone-500">

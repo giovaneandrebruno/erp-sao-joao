@@ -15,7 +15,13 @@ export async function criarNegociacao(form: FormData) {
     if (!nome) throw new Error("Escolha um cliente ou informe o nome do novo contato.");
     const { data, error } = await supabase
       .from("clientes")
-      .insert({ nome, telefone: texto(form, "novo_telefone") })
+      .insert({
+        nome,
+        telefone: texto(form, "novo_telefone"),
+        origem: texto(form, "origem"),
+        vendedor_id: texto(form, "vendedor_id"),
+        arquiteto_id: texto(form, "arquiteto_id"),
+      })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
