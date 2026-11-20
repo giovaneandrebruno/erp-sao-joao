@@ -139,7 +139,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
         </div>
       </Cartao>
 
-      <PastaDoCliente clienteId={id} nome={cliente.nome} documentos={docsComLink} anotacoes={anotacoes ?? []} briefing={briefing} />
+      <PastaDoCliente clienteId={id} nome={cliente.nome} fechado={situacao !== "lead" || pedidosValidos.length > 0} documentos={docsComLink} anotacoes={anotacoes ?? []} briefing={briefing} />
 
       {!!negociacoes?.length && (
         <>

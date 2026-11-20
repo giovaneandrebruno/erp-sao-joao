@@ -2,6 +2,8 @@
 export const TIPOS_DOCUMENTO = {
   pedido_fechado: "Pedido fechado (assinado)",
   memorial_descritivo: "Memorial descritivo",
+  eletrodomesticos: "Eletrodomésticos (manuais e medidas)",
+  referencia: "Referência do cliente (fotos, inspiração)",
   briefing: "Briefing / ficha do cliente",
   contrato: "Contrato",
   projeto: "Projeto / planta / render",
