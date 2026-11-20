@@ -1,9 +1,15 @@
 /** Regras do cadastro de clientes: CPF/CNPJ, telefone, CEP e endereço. Tudo feito aqui, sem serviço de fora. */
 
-export const SITUACOES = { lead: "Lead (ainda não fechou)", cliente: "Cliente (já fechou)", inativo: "Inativo" } as const;
+/** Situação do cliente. "cliente" é o valor gravado para quem está ativo. */
+export const SITUACOES = {
+  lead: "Lead (ainda não comprou)",
+  cliente: "Ativo (cliente comprando)",
+  ocioso: "Ocioso (já comprou, mas está parado)",
+  inativo: "Inativo (não compra mais)",
+} as const;
 export type Situacao = keyof typeof SITUACOES;
-export const COR_SITUACAO = { lead: "amber", cliente: "green", inativo: "stone" } as const;
-export const ROTULO_CURTO_SITUACAO: Record<Situacao, string> = { lead: "Lead", cliente: "Cliente", inativo: "Inativo" };
+export const COR_SITUACAO = { lead: "blue", cliente: "green", ocioso: "amber", inativo: "stone" } as const;
+export const ROTULO_CURTO_SITUACAO: Record<Situacao, string> = { lead: "Lead", cliente: "Ativo", ocioso: "Ocioso", inativo: "Inativo" };
 
 export const ESTADOS_CIVIS = ["Solteiro(a)", "Casado(a)", "União estável", "Divorciado(a)", "Viúvo(a)"];
 
