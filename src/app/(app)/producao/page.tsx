@@ -35,6 +35,14 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
     .order("ordem", { ascending: true, nullsFirst: false })
     .order("numero", { ascending: true });
   const todas = (data ?? []) as Ordem[];
+
+  // pedidos com material reservado que o estoque não cobre
+  const { data: emFalta } = await supabase.from("produtos_saldo").select("id").lt("livre", 0);
+  const idsEmFalta = (emFalta ?? []).map((x) => x.id);
+  const { data: materiaisEmFalta } = idsEmFalta.length
+    ? await supabase.from("pedido_materiais").select("pedido_id").in("produto_id", idsEmFalta)
+    : { data: [] };
+  const faltaMaterial = [...new Set((materiaisEmFalta ?? []).map((m) => m.pedido_id as string))];
   const hoje = hojeISO();
 
   const ativas = todas.filter((o) => o.status_pcp !== "FIN");
@@ -127,7 +135,7 @@ export default async function ProducaoPage({ searchParams }: PageProps<"/produca
         <Legenda contagem={contagem} ativo={filtroStatus || undefined} href={(s) => montarHref(sp, { status: s })} />
       </div>
 
-      {ver === "quadro" ? lista.length ? <QuadroArrastavel ordens={lista} hoje={hoje} concluidas={todas.length - ativas.length} /> : <Cartao><p className="text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p></Cartao> : <PlanilhaOs ordens={lista} hoje={hoje} />}
+      {ver === "quadro" ? lista.length ? <QuadroArrastavel ordens={lista} hoje={hoje} concluidas={todas.length - ativas.length} faltaMaterial={faltaMaterial} /> : <Cartao><p className="text-center text-sm text-stone-400">Nenhuma ordem de serviço com esses filtros.</p></Cartao> : <PlanilhaOs ordens={lista} hoje={hoje} />}
     </>
   );
 }

@@ -14,7 +14,7 @@ type Arrasto = { id: string; x: number; y: number; dx: number; dy: number; largu
  * coluna e a etapa (STATUS) muda sozinha no sistema.
  * No computador, clique e arraste. No celular, segure o cartão e arraste.
  */
-export function QuadroArrastavel({ ordens, hoje, concluidas }: { ordens: Ordem[]; hoje: string; concluidas: number }) {
+export function QuadroArrastavel({ ordens, hoje, concluidas, faltaMaterial = [] }: { ordens: Ordem[]; hoje: string; concluidas: number; faltaMaterial?: string[] }) {
   const router = useRouter();
   const [lista, setLista] = useState(ordens);
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
@@ -167,6 +167,7 @@ export function QuadroArrastavel({ ordens, hoje, concluidas }: { ordens: Ordem[]
                     key={o.id}
                     o={o}
                     hoje={hoje}
+                    falta={Boolean(o.pedido_id && faltaMaterial.includes(String(o.pedido_id)))}
                     fantasma={arrasto?.id === o.id}
                     aoApertar={(e) => comecar(e, o.id)}
                     aoClicar={(e) => { if (arrastou.current) { e.preventDefault(); arrastou.current = false; } }}
@@ -201,6 +202,7 @@ export function QuadroArrastavel({ ordens, hoje, concluidas }: { ordens: Ordem[]
 function CartaoOs({
   o,
   hoje,
+  falta,
   fantasma,
   aoApertar,
   aoClicar,
@@ -208,6 +210,7 @@ function CartaoOs({
 }: {
   o: Ordem;
   hoje: string;
+  falta?: boolean;
   fantasma?: boolean;
   aoApertar?: (e: React.PointerEvent<HTMLElement>) => void;
   aoClicar?: (e: React.MouseEvent) => void;
@@ -235,6 +238,7 @@ function CartaoOs({
           {o.responsavel && <span>Resp.: {o.responsavel}</span>}
         </div>
         <div className="mt-2"><PrazoSelo ordem={o} hoje={hoje} /></div>
+        {falta && <p className="mt-2 text-xs font-semibold text-rosa">Falta material no estoque</p>}
         {o.pendencias && <p className="mt-2 line-clamp-2 text-xs text-rosa">{o.pendencias}</p>}
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-stone-100" title={`${prog.feitos} de ${prog.total} etapas concluídas`}>
           <div className="h-full bg-neon" style={{ width: `${(prog.feitos / prog.total) * 100}%` }} />

@@ -27,6 +27,8 @@ export async function salvarConfiguracoes(form: FormData) {
       markup_padrao: n("markup_padrao", 1),
       margem_minima: n("margem_minima", 0),
       validade_orcamento_dias: Math.round(n("validade_orcamento_dias", 15)),
+      orcamento_parado_dias: Math.min(90, Math.max(1, Math.round(n("orcamento_parado_dias", 7)))),
+      checklist_entrega_itens: texto(form, "checklist_entrega_itens") ?? "",
       clausulas_contrato: texto(form, "clausulas_contrato") ?? "",
       // textos da proposta: em branco = não mostrar
       proposta_abertura: texto(form, "proposta_abertura") ?? "",
@@ -34,7 +36,7 @@ export async function salvarConfiguracoes(form: FormData) {
       proposta_garantias: texto(form, "proposta_garantias") ?? "",
       proposta_depoimento: texto(form, "proposta_depoimento"),
       ...Object.fromEntries(
-        (["msg_orcamento", "msg_agendamento", "msg_cobranca", "msg_cobranca_vencida", "msg_pos_venda"] as const)
+        (["msg_orcamento", "msg_agendamento", "msg_cobranca", "msg_cobranca_vencida", "msg_pos_venda", "msg_satisfacao"] as const)
           .map((k) => [k, texto(form, k)])
           .filter(([, val]) => val),
       ),

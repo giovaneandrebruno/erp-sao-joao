@@ -6,7 +6,7 @@ Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 
 | Área | Módulo | O que faz |
 |---|---|---|
-| Vendas | Painel | Vendido no mês com lucro, funil, prazos atrasados, contas da semana, retornos do dia |
+| Vendas | Painel | Vendido no mês com lucro, funil, prazos atrasados, contas da semana, retornos do dia, orçamentos vencendo ou sem resposta |
 | Vendas | Funil de vendas | Negociações por etapa (novo contato → negociação → ganho/perdido), próxima ação, origem, histórico, atalho de WhatsApp |
 | Vendas | Clientes | Cadastro com histórico de orçamentos e pedidos |
 | Vendas | Orçamentos | Itens por ambiente com custo e venda, markup automático, comissões, forma de pagamento, previsão de lucro e PDF; importação dos itens do programa de projeto (planilha CSV ou texto copiado) |
@@ -15,13 +15,18 @@ Sistema de gestão da marcenaria e da loja São João Móveis, feito sob medida.
 | Operação | Agenda | Calendário do mês com medições, entregas, montagens, assistência e retornos de venda, por pessoa |
 | Operação | Prazos | Marcos atrasados e dos próximos 21 dias de todos os pedidos |
 | Operação | Produção | Quadro por etapa: corte, fita de borda, montagem, acabamento, pronto, instalação |
+| Operação | Materiais do pedido | Chapas, fitas e ferragens de cada pedido (à mão ou por planilha .xlsx), reservados no estoque e baixados sozinhos quando o pedido entra em produção; aviso de material em falta no quadro de produção |
+| Operação | Entrega e montagem | Checklist de conferência, fotos, quem recebeu e termo de entrega para assinar (PDF) |
 | Operação | Assistência técnica | Chamados de pós-venda com visita, montador e garantia |
+| Operação | Pesquisa de satisfação | Nota de 0 a 10 pedida pelo WhatsApp depois da entrega, guardada no pedido e somada nos Relatórios |
 | Operação | App do montador | Tela de celular com os serviços do dia, como chegar, WhatsApp, check-in com localização, fotos e conclusão |
-| Gestão | Financeiro | Contas a pagar e a receber por mês, vencidos e saldo previsto |
+| Gestão | Financeiro | Contas a pagar e a receber por mês, vencidos, saldo previsto, contas que se repetem todo mês e conferência com o extrato do banco (.xlsx) |
 | Gestão | Análises | Painéis de vendas, funil, produção e prazos e financeiro com gráficos, comparação com o mês e o ano anteriores, previsão de vendas e de caixa para 3 meses, alerta de gasto fora do normal e avisos automáticos do que merece atenção |
 | Gestão | Relatórios | Vendas e lucro do mês, caixa, últimos 12 meses, vendas por vendedor, despesas por categoria, origem dos clientes e motivos de perda |
 | Gestão | Comissões | Comissão de vendedores e RT de arquitetos por mês |
-| Gestão | Estoque | Matéria-prima e produtos, movimentações e alerta de mínimo |
+| Gestão | Estoque | Matéria-prima e produtos, movimentações, saldo reservado e livre, alerta de mínimo |
+| Gestão | Lista de compras | O que falta para os pedidos e o que está abaixo do mínimo, por fornecedor, pronta para o WhatsApp |
+| Gestão | Sobras de chapa | Retalhos com medida e local, busca por tamanho da peça e registro de uso |
 | Gestão | Fornecedores, Equipe e parceiros | Cadastros de fornecedores, vendedores, arquitetos e montadores; usuários e perfis de acesso |
 | Gestão | Configurações | Dados da empresa, impostos, taxas de cartão, comissões padrão, markup, margem mínima, cláusulas do contrato e mensagens prontas de WhatsApp |
 
