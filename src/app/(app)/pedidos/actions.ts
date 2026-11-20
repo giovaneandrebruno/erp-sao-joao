@@ -126,6 +126,5 @@ export async function lancarComissoes(pedidoId: string) {
   }
   await supabase.from("pedidos").update({ comissoes_lancadas: true }).eq("id", pedidoId);
   revalidatePath(`/pedidos/${pedidoId}`);
-  revalidatePath("/comissoes");
   revalidatePath("/financeiro");
 }

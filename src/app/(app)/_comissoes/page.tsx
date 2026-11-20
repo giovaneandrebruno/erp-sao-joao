@@ -1,10 +1,11 @@
+/** Tela de comissões DESLIGADA por enquanto a pedido do dono (2026-11-20): a pasta com "_" fica fora das rotas. Para religar, renomear para "comissoes" e voltar o item no menu (src/lib/navegacao.ts). */
 import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Cartao, Selo, Tabela, Titulo } from "@/components/ui";
 import { ROTULOS2, brl, data } from "@/lib/format";
 
-export default async function ComissoesPage({ searchParams }: PageProps<"/comissoes">) {
+export default async function ComissoesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await connection();
   const sp = await searchParams;
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : new Date().toISOString().slice(0, 7);

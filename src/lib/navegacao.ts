@@ -23,7 +23,6 @@ export const NAVEGACAO: Secao[] = [
         filhos: [
           { href: "/crm", rotulo: "Funil de vendas", dica: "Negociações por etapa" },
           { href: "/orcamentos", rotulo: "Orçamentos", dica: "Propostas e aprovações" },
-          { href: "/comissoes", rotulo: "Comissões", dica: "Vendedores e arquitetos" },
           { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
