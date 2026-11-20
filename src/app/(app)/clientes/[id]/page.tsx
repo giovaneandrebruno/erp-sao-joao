@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { BotaoLink, Cartao, Indicador, Selo, Tabela, Titulo } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
 import { ROTULOS, ROTULOS2, brl, data, hojeISO, linkMapa, linkWhats } from "@/lib/format";
-import { COR_SITUACAO, ROTULO_CURTO_SITUACAO, SITUACOES, enderecoCompleto, idade, type Situacao } from "@/lib/cliente";
+import { enderecoCompleto, idade, type Situacao } from "@/lib/cliente";
 import { FormCliente } from "../form";
-import { excluirCliente, mudarSituacao } from "../actions";
+import { excluirCliente } from "../actions";
+import { SeletorSituacao } from "../situacao";
 import { BotaoExcluir } from "@/components/acoes";
 import { SeloStatus } from "../../producao/componentes";
 
@@ -96,16 +97,12 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
         }
       >
         {cliente.nome}
-        <Selo cor={COR_SITUACAO[situacao]}>{ROTULO_CURTO_SITUACAO[situacao]}</Selo>
       </Titulo>
 
       <div className="-mt-3 mb-6 flex flex-wrap items-center gap-3 text-sm">
         {pj && <Selo>Empresa</Selo>}
-        {(Object.keys(SITUACOES) as Situacao[]).filter((s) => s !== situacao).map((s) => (
-          <form key={s} action={mudarSituacao.bind(null, id, s)}>
-            <button className="text-xs font-medium text-madeira-700 hover:underline">Marcar como {ROTULO_CURTO_SITUACAO[s].toLowerCase()}</button>
-          </form>
-        ))}
+        <span className="text-xs text-stone-500">Situação:</span>
+        <SeletorSituacao id={id} situacao={situacao} />
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
