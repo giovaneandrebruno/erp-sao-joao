@@ -1,6 +1,7 @@
 /**
  * Menu do sistema: seções, abas e sub-abas.
- * Uma aba com "filhos" abre e fecha no menu lateral; sem filhos, é um link direto.
+ * No menu lateral cada aba é uma linha só (sem abrir e fechar). Quando a aba tem "filhos",
+ * o menu leva para a primeira sub-aba e as sub-abas aparecem como abas no topo da tela.
  * Também alimenta o caminho no topo da tela e a busca rápida (Ctrl+K).
  */
 export type Icone =
@@ -22,7 +23,7 @@ export const NAVEGACAO: Secao[] = [
         filhos: [
           { href: "/crm", rotulo: "Funil de vendas", dica: "Negociações por etapa" },
           { href: "/orcamentos", rotulo: "Orçamentos", dica: "Propostas e aprovações" },
-          { href: "/comissoes", rotulo: "Comissões", dica: "Vendedores e arquitetos" },
+          { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
       { rotulo: "Clientes", icone: "clientes", href: "/clientes" },
@@ -37,7 +38,6 @@ export const NAVEGACAO: Secao[] = [
         filhos: [
           { href: "/pedidos", rotulo: "Todos os pedidos" },
           { href: "/prazos", rotulo: "Prazos", dica: "Marcos atrasados e próximos" },
-          { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
       {
@@ -70,8 +70,6 @@ export const NAVEGACAO: Secao[] = [
         icone: "financeiro",
         filhos: [
           { href: "/financeiro", rotulo: "Lançamentos" },
-          { href: "/financeiro?tipo=receber", rotulo: "A receber" },
-          { href: "/financeiro?tipo=pagar", rotulo: "A pagar" },
           { href: "/financeiro?situacao=vencidos", rotulo: "Vencidos" },
           { href: "/financeiro/extrato", rotulo: "Conferir com o extrato", dica: "Marca como pago o que já caiu no banco" },
         ],

@@ -25,17 +25,6 @@ export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode;
   const atual = localizar(caminho, busca);
   const secoes = menuDoPapel(papel);
 
-  // a aba da tela atual fica aberta; o usuário pode abrir ou fechar qualquer uma
-  const [abertas, setAbertas] = useState<Set<string>>(new Set());
-  const [fechadas, setFechadas] = useState<Set<string>>(new Set());
-  const expandida = (rotulo: string) => abertas.has(rotulo) || (atual?.aba.rotulo === rotulo && !fechadas.has(rotulo));
-  const alternar = (rotulo: string) => {
-    const tira = (c: Set<string>) => { const n = new Set(c); n.delete(rotulo); return n; };
-    const poe = (c: Set<string>) => new Set(c).add(rotulo);
-    if (expandida(rotulo)) { setAbertas(tira); setFechadas(poe); }
-    else { setAbertas(poe); setFechadas(tira); }
-  };
-
   return (
     <>
       <div className="flex items-center justify-between px-1">
@@ -74,9 +63,6 @@ export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode;
                   key={a.rotulo}
                   aba={a}
                   ativa={atual?.aba.rotulo === a.rotulo}
-                  folhaAtiva={atual?.folha?.href}
-                  expandida={expandida(a.rotulo)}
-                  alternar={() => alternar(a.rotulo)}
                 />
               ))}
             </div>
@@ -88,46 +74,37 @@ export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode;
   );
 }
 
-function ItemAba({ aba, ativa, folhaAtiva, expandida, alternar }: { aba: Aba; ativa: boolean; folhaAtiva?: string; expandida: boolean; alternar: () => void }) {
-  const base = `group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] transition-colors`;
-  const marcador = ativa && <span className="absolute -left-1 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-ciano" />;
+/** Aba do menu: sempre uma linha só. Se tiver sub-abas, abre a primeira; as outras ficam no topo da tela. */
+function ItemAba({ aba, ativa }: { aba: Aba; ativa: boolean }) {
   const cor = ativa ? "bg-white/[0.08] font-medium text-stone-900" : "text-stone-500 hover:bg-white/[0.04] hover:text-stone-800";
-
-  if (!aba.filhos) {
-    return (
-      <Link href={aba.href!} className={`${base} ${cor}`} aria-current={ativa ? "page" : undefined}>
-        {marcador}
-        <Icone nome={aba.icone} />
-        <span className="flex-1 truncate">{aba.rotulo}</span>
-      </Link>
-    );
-  }
-
   return (
-    <div>
-      <button type="button" onClick={alternar} aria-expanded={expandida} className={`${base} ${ativa && !expandida ? cor : ativa ? "font-medium text-stone-900 hover:bg-white/[0.04]" : cor}`}>
-        {ativa && !expandida && marcador}
-        <Icone nome={aba.icone} />
-        <span className="flex-1 truncate text-left">{aba.rotulo}</span>
-        <Icone nome="seta" className={`h-3.5 w-3.5 text-stone-400 transition-transform ${expandida ? "rotate-90" : ""}`} />
-      </button>
-      {expandida && (
-        <div className="mb-1 ml-[21px] mt-0.5 flex flex-col border-l border-white/10">
-          {aba.filhos.map((f) => {
-            const sel = folhaAtiva === f.href;
-            return (
-              <Link
-                key={f.href}
-                href={f.href}
-                aria-current={sel ? "page" : undefined}
-                className={`relative -ml-px flex items-center rounded-r-md border-l py-1.5 pl-4 pr-3 text-[13px] transition-colors ${sel ? "border-ciano bg-white/[0.08] font-medium text-stone-900" : "border-transparent text-stone-500 hover:border-white/25 hover:text-stone-800"}`}
-              >
-                <span className="truncate">{f.rotulo}</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <Link href={aba.href ?? aba.filhos![0].href} className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] transition-colors ${cor}`} aria-current={ativa ? "page" : undefined}>
+      {ativa && <span className="absolute -left-1 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-ciano" />}
+      <Icone nome={aba.icone} />
+      <span className="flex-1 truncate">{aba.rotulo}</span>
+    </Link>
+  );
+}
+
+/** Sub-abas da aba aberta, mostradas no topo da tela (some quando a aba não tem sub-abas). */
+export function AbasDoGrupo({ papel }: { papel: Papel }) {
+  const caminho = usePathname();
+  const busca = useSearchParams().toString();
+  const atual = localizar(caminho, busca);
+  if (!atual?.folha) return null;
+  const aba = menuDoPapel(papel).flatMap((s) => s.abas).find((a) => a.rotulo === atual.aba.rotulo);
+  const filhos = aba?.filhos ?? [];
+  if (filhos.length < 2 || caminho !== atual.folha.href.split("?")[0]) return null;
+  return (
+    <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-stone-200 text-sm print:hidden" aria-label={aba!.rotulo}>
+      {filhos.map((f) => {
+        const sel = atual.folha?.href === f.href;
+        return (
+          <Link key={f.href} href={f.href} title={f.dica} aria-current={sel ? "page" : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 font-medium transition ${sel ? "border-violeta text-stone-900" : "border-transparent text-stone-500 hover:text-stone-900"}`}>
+            {f.rotulo}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
