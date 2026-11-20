@@ -32,9 +32,13 @@ begin
   end if;
   return new;
 end $$;
-drop trigger if exists trg_origem_movimento on public.movimentos_estoque;
-create trigger trg_origem_movimento before insert on public.movimentos_estoque
-for each row execute function public.origem_do_movimento();
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'trg_origem_movimento' and tgrelid = 'public.movimentos_estoque'::regclass) then
+    create trigger trg_origem_movimento before insert on public.movimentos_estoque
+    for each row execute function public.origem_do_movimento();
+  end if;
+end $$;
 revoke execute on function public.origem_do_movimento() from public, anon, authenticated;
 
 -- Entrada com custo informado recalcula o custo médio do produto.
@@ -233,10 +237,15 @@ begin
 end $$;
 create index if not exists movimentos_estoque_compra_id_idx on public.movimentos_estoque (compra_id);
 
-drop trigger if exists trg_cotacoes_upd on public.cotacoes;
-create trigger trg_cotacoes_upd before update on public.cotacoes for each row execute function set_atualizado_em();
-drop trigger if exists trg_compras_upd on public.compras;
-create trigger trg_compras_upd before update on public.compras for each row execute function set_atualizado_em();
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'trg_cotacoes_upd' and tgrelid = 'public.cotacoes'::regclass) then
+    create trigger trg_cotacoes_upd before update on public.cotacoes for each row execute function set_atualizado_em();
+  end if;
+  if not exists (select 1 from pg_trigger where tgname = 'trg_compras_upd' and tgrelid = 'public.compras'::regclass) then
+    create trigger trg_compras_upd before update on public.compras for each row execute function set_atualizado_em();
+  end if;
+end $$;
 
 -- Receber material: grava o recebimento, dá entrada no estoque com o preço da compra
 -- e, se pedido (só o administrador), lança a conta a pagar no Financeiro.
@@ -332,8 +341,9 @@ begin
   foreach v_tab in array array['inventarios', 'inventario_itens', 'cotacoes', 'cotacao_itens', 'cotacao_fornecedores',
                                'cotacao_precos', 'compras', 'compra_itens', 'requisicoes_compra', 'recebimentos'] loop
     execute format('alter table public.%I enable row level security', v_tab);
-    execute format('drop policy if exists "escritorio_acesso_total" on public.%I', v_tab);
-    execute format('create policy "escritorio_acesso_total" on public.%I for all to authenticated using (public.eh_escritorio()) with check (public.eh_escritorio())', v_tab);
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = v_tab and policyname = 'escritorio_acesso_total') then
+      execute format('create policy "escritorio_acesso_total" on public.%I for all to authenticated using (public.eh_escritorio()) with check (public.eh_escritorio())', v_tab);
+    end if;
     execute format('grant select, insert, update, delete on public.%I to authenticated', v_tab);
     execute format('revoke all on public.%I from anon', v_tab);
     if not exists (select 1 from pg_trigger where tgname = 'auditoria' and tgrelid = format('public.%I', v_tab)::regclass) then
