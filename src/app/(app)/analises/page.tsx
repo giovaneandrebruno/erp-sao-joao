@@ -42,14 +42,6 @@ export default async function AnalisesPage({ searchParams }: PageProps<"/analise
     <>
       <Titulo sub={a.emAndamento ? `Mês em andamento: comparações usam os mesmos dias do mês anterior` : `Mês fechado de ${rotuloMes(mes)}`}>Análises</Titulo>
 
-      <nav className="mb-5 flex gap-1 overflow-x-auto border-b border-stone-200 text-sm" aria-label="Painéis">
-        {ABAS.map((t) => (
-          <Link key={t.chave} href={qs({ aba: t.chave === "visao" ? null : t.chave })} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 font-medium transition ${aba === t.chave ? "border-violeta text-stone-900" : "border-transparent text-stone-500 hover:text-stone-900"}`} aria-current={aba === t.chave ? "page" : undefined}>
-            {t.rotulo}
-          </Link>
-        ))}
-      </nav>
-
       <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
         <Link href={qs({ mes: somarMeses(mes, -1) })} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 hover:border-violeta/40" aria-label="Mês anterior">←</Link>
         <span className="min-w-20 text-center font-semibold">{rotuloMes(mes)}</span>

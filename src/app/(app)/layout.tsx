@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Marca } from "@/components/logo";
 import { Icone } from "@/components/icones";
-import { Menu } from "./menu";
+import { AbasDoGrupo, Menu } from "./menu";
 import { Barra } from "./barra";
 import { Paleta } from "./paleta";
 import { Avisos } from "@/components/acoes";
@@ -43,6 +43,12 @@ async function MenuDoUsuario() {
   return <Menu papel={papel} marca={<Marca />} rodape={rodape} />;
 }
 
+/** Sub-abas da tela aberta, no topo do conteúdo. */
+async function AbasDoUsuario() {
+  const perfil = await perfilAtual();
+  return <AbasDoGrupo papel={perfil?.papel ?? "vendedor"} />;
+}
+
 /** A busca rápida fica fora do menu lateral para usar as cores claras. */
 async function BuscaDoUsuario() {
   const perfil = await perfilAtual();
@@ -66,7 +72,12 @@ export default function AppLayout({ children, modal }: LayoutProps<"/">) {
           </Suspense>
         </header>
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 print:p-0">
-          <div className="mx-auto max-w-[1400px]">{children}</div>
+          <div className="mx-auto max-w-[1400px]">
+            <Suspense fallback={null}>
+              <AbasDoUsuario />
+            </Suspense>
+            {children}
+          </div>
         </main>
       </div>
       {modal}

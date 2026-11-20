@@ -1,7 +1,7 @@
 /**
  * Menu do sistema: seções, abas e sub-abas.
- * Uma aba com "filhos" vira um título no menu lateral, com as sub-abas sempre à vista logo abaixo;
- * sem filhos, é um link direto.
+ * No menu lateral cada aba é uma linha só (sem abrir e fechar). Quando a aba tem "filhos",
+ * o menu leva para a primeira sub-aba e as sub-abas aparecem como abas no topo da tela.
  * Também alimenta o caminho no topo da tela e a busca rápida (Ctrl+K).
  */
 export type Icone =

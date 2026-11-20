@@ -63,7 +63,6 @@ export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode;
                   key={a.rotulo}
                   aba={a}
                   ativa={atual?.aba.rotulo === a.rotulo}
-                  folhaAtiva={atual?.folha?.href}
                 />
               ))}
             </div>
@@ -75,42 +74,37 @@ export function Menu({ papel, marca, rodape }: { papel: Papel; marca: ReactNode;
   );
 }
 
-/** Aba do menu: link direto, ou título de grupo com as sub-abas sempre à vista (sem abrir e fechar). */
-function ItemAba({ aba, ativa, folhaAtiva }: { aba: Aba; ativa: boolean; folhaAtiva?: string }) {
-  const base = `group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] transition-colors`;
-
-  if (!aba.filhos) {
-    const cor = ativa ? "bg-white/[0.08] font-medium text-stone-900" : "text-stone-500 hover:bg-white/[0.04] hover:text-stone-800";
-    return (
-      <Link href={aba.href!} className={`${base} ${cor}`} aria-current={ativa ? "page" : undefined}>
-        {ativa && <span className="absolute -left-1 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-ciano" />}
-        <Icone nome={aba.icone} />
-        <span className="flex-1 truncate">{aba.rotulo}</span>
-      </Link>
-    );
-  }
-
+/** Aba do menu: sempre uma linha só. Se tiver sub-abas, abre a primeira; as outras ficam no topo da tela. */
+function ItemAba({ aba, ativa }: { aba: Aba; ativa: boolean }) {
+  const cor = ativa ? "bg-white/[0.08] font-medium text-stone-900" : "text-stone-500 hover:bg-white/[0.04] hover:text-stone-800";
   return (
-    <div>
-      <div className="flex items-center gap-3 px-3 pb-1 pt-2 text-[13.5px] font-medium text-stone-800">
-        <Icone nome={aba.icone} />
-        <span className="flex-1 truncate">{aba.rotulo}</span>
-      </div>
-      <div className="mb-1 ml-[21px] flex flex-col border-l border-white/10">
-        {aba.filhos.map((f) => {
-          const sel = ativa && folhaAtiva === f.href;
-          return (
-            <Link
-              key={f.href}
-              href={f.href}
-              aria-current={sel ? "page" : undefined}
-              className={`relative -ml-px flex items-center rounded-r-md border-l py-1.5 pl-4 pr-3 text-[13px] transition-colors ${sel ? "border-ciano bg-white/[0.08] font-medium text-stone-900" : "border-transparent text-stone-500 hover:border-white/25 hover:text-stone-800"}`}
-            >
-              <span className="truncate">{f.rotulo}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+    <Link href={aba.href ?? aba.filhos![0].href} className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] transition-colors ${cor}`} aria-current={ativa ? "page" : undefined}>
+      {ativa && <span className="absolute -left-1 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-ciano" />}
+      <Icone nome={aba.icone} />
+      <span className="flex-1 truncate">{aba.rotulo}</span>
+    </Link>
+  );
+}
+
+/** Sub-abas da aba aberta, mostradas no topo da tela (some quando a aba não tem sub-abas). */
+export function AbasDoGrupo({ papel }: { papel: Papel }) {
+  const caminho = usePathname();
+  const busca = useSearchParams().toString();
+  const atual = localizar(caminho, busca);
+  if (!atual?.folha) return null;
+  const aba = menuDoPapel(papel).flatMap((s) => s.abas).find((a) => a.rotulo === atual.aba.rotulo);
+  const filhos = aba?.filhos ?? [];
+  if (filhos.length < 2 || caminho !== atual.folha.href.split("?")[0]) return null;
+  return (
+    <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-stone-200 text-sm print:hidden" aria-label={aba!.rotulo}>
+      {filhos.map((f) => {
+        const sel = atual.folha?.href === f.href;
+        return (
+          <Link key={f.href} href={f.href} title={f.dica} aria-current={sel ? "page" : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 font-medium transition ${sel ? "border-violeta text-stone-900" : "border-transparent text-stone-500 hover:text-stone-900"}`}>
+            {f.rotulo}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
