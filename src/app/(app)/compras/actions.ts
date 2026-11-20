@@ -7,7 +7,7 @@ import { numero, texto } from "@/lib/format";
 import type { StatusCompra } from "@/lib/estoque";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
-type ItemNovo = { produto_id: string | null; descricao: string; quantidade: number; unidade: string; preco_unitario?: number };
+type ItemNovo = { produto_id: string | null; descricao: string; quantidade: number; unidade: string; preco_unitario?: number; pedido_id?: string | null };
 
 function atualizar(...extras: string[]) {
   for (const p of ["/compras", "/compras/requisicoes", "/compras/cotacoes", "/compras/pedidos", "/compras/recebimento", "/estoque", ...extras]) revalidatePath(p);
@@ -41,7 +41,7 @@ async function novaCompra(supabase: Supa, fornecedorId: string, itens: ItemNovo[
   const { data, error } = await supabase.from("compras").insert({ fornecedor_id: fornecedorId, ...extra }).select("id").single();
   if (error) throw new Error(error.message);
   if (itens.length) {
-    const { error: e2 } = await supabase.from("compra_itens").insert(itens.map((i, ordem) => ({ ...i, compra_id: data.id, ordem, preco_unitario: i.preco_unitario ?? 0 })));
+    const { error: e2 } = await supabase.from("compra_itens").insert(itens.map((i, ordem) => ({ ...i, compra_id: data.id, ordem, preco_unitario: i.preco_unitario ?? 0, pedido_id: i.pedido_id ?? (extra.pedido_id as string | undefined) ?? null })));
     if (e2) throw new Error(e2.message);
   }
   return data.id as string;
@@ -51,7 +51,7 @@ async function novaCotacao(supabase: Supa, titulo: string, itens: ItemNovo[], fo
   const { data, error } = await supabase.from("cotacoes").insert({ titulo }).select("id").single();
   if (error) throw new Error(error.message);
   if (itens.length) {
-    const { error: e2 } = await supabase.from("cotacao_itens").insert(itens.map((i, ordem) => ({ cotacao_id: data.id, produto_id: i.produto_id, descricao: i.descricao, quantidade: i.quantidade, unidade: i.unidade, ordem })));
+    const { error: e2 } = await supabase.from("cotacao_itens").insert(itens.map((i, ordem) => ({ cotacao_id: data.id, produto_id: i.produto_id, descricao: i.descricao, quantidade: i.quantidade, unidade: i.unidade, pedido_id: i.pedido_id ?? null, ordem })));
     if (e2) throw new Error(e2.message);
   }
   const unicos = [...new Set(fornecedores.filter(Boolean))];
@@ -137,7 +137,7 @@ export async function cotacaoDasRequisicoes(form: FormData) {
   const id = await novaCotacao(
     supabase,
     texto(form, "titulo") ?? `Requisições ${reqs.map((r) => r.descricao).slice(0, 2).join(", ")}${reqs.length > 2 ? "..." : ""}`,
-    reqs.map((r) => ({ produto_id: r.produto_id, descricao: r.descricao, quantidade: Number(r.quantidade), unidade: r.unidade })),
+    reqs.map((r) => ({ produto_id: r.produto_id, descricao: r.descricao, quantidade: Number(r.quantidade), unidade: r.unidade, pedido_id: r.pedido_id })),
     reqs.map((r) => r.produto?.fornecedor_id ?? ""),
   );
   await supabase.from("requisicoes_compra").update({ status: "em_cotacao", cotacao_id: id }).in("id", reqs.map((r) => r.id));
@@ -155,7 +155,7 @@ export async function compraDasRequisicoes(form: FormData) {
   const id = await novaCompra(
     supabase,
     fornecedor,
-    reqs.map((r) => ({ produto_id: r.produto_id, descricao: r.descricao, quantidade: Number(r.quantidade), unidade: r.unidade, preco_unitario: Number(r.produto?.custo ?? 0) })),
+    reqs.map((r) => ({ produto_id: r.produto_id, descricao: r.descricao, quantidade: Number(r.quantidade), unidade: r.unidade, preco_unitario: Number(r.produto?.custo ?? 0), pedido_id: r.pedido_id })),
     pedidos.length === 1 ? { pedido_id: pedidos[0] } : {},
   );
   await supabase.from("requisicoes_compra").update({ status: "comprada", compra_id: id }).in("id", reqs.map((r) => r.id));
@@ -189,7 +189,7 @@ export async function adicionarItemCotacao(cotacaoId: string, form: FormData) {
   }
   const quantidade = numero(form, "quantidade") ?? 0;
   if (!descricao || quantidade <= 0) throw new Error("Informe o material e a quantidade.");
-  const { error } = await supabase.from("cotacao_itens").insert({ cotacao_id: cotacaoId, produto_id: produtoId, descricao, quantidade, unidade: unidade ?? "un", ordem: 999 });
+  const { error } = await supabase.from("cotacao_itens").insert({ cotacao_id: cotacaoId, produto_id: produtoId, descricao, quantidade, unidade: unidade ?? "un", pedido_id: texto(form, "pedido_id"), ordem: 999 });
   if (error) throw new Error(error.message);
   revalidatePath(`/compras/cotacoes/${cotacaoId}`);
 }
@@ -268,18 +268,18 @@ export async function fecharCotacao(cotacaoId: string, escolha: string, form?: F
   const supabase = await createClient();
   const [{ data: cot }, { data: itens }, { data: forns }] = await Promise.all([
     supabase.from("cotacoes").select("id, numero, status").eq("id", cotacaoId).single(),
-    supabase.from("cotacao_itens").select("id, produto_id, descricao, quantidade, unidade, precos:cotacao_precos(fornecedor_id, preco_unitario)").eq("cotacao_id", cotacaoId).order("ordem"),
+    supabase.from("cotacao_itens").select("id, produto_id, descricao, quantidade, unidade, pedido_id, precos:cotacao_precos(fornecedor_id, preco_unitario)").eq("cotacao_id", cotacaoId).order("ordem"),
     supabase.from("cotacao_fornecedores").select("fornecedor_id, prazo_entrega_dias, condicao_pagamento, frete").eq("cotacao_id", cotacaoId),
   ]);
   if (!cot || cot.status !== "aberta") throw new Error("Esta cotação não está aberta.");
-  type It = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; precos: { fornecedor_id: string; preco_unitario: number }[] };
+  type It = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; pedido_id: string | null; precos: { fornecedor_id: string; preco_unitario: number }[] };
   const porFornecedor = new Map<string, ItemNovo[]>();
   for (const i of (itens ?? []) as It[]) {
     const preco = escolha === "melhor"
       ? [...i.precos].sort((a, b) => Number(a.preco_unitario) - Number(b.preco_unitario))[0]
       : i.precos.find((p) => p.fornecedor_id === escolha) ?? { fornecedor_id: escolha, preco_unitario: 0 };
     if (!preco) continue;
-    porFornecedor.set(preco.fornecedor_id, [...(porFornecedor.get(preco.fornecedor_id) ?? []), { produto_id: i.produto_id, descricao: i.descricao, quantidade: Number(i.quantidade), unidade: i.unidade, preco_unitario: Number(preco.preco_unitario) }]);
+    porFornecedor.set(preco.fornecedor_id, [...(porFornecedor.get(preco.fornecedor_id) ?? []), { produto_id: i.produto_id, descricao: i.descricao, quantidade: Number(i.quantidade), unidade: i.unidade, preco_unitario: Number(preco.preco_unitario), pedido_id: i.pedido_id }]);
   }
   if (!porFornecedor.size) throw new Error("Preencha os preços dos fornecedores antes de fechar.");
   const criadas: string[] = [];
@@ -352,7 +352,7 @@ export async function adicionarItemCompra(compraId: string, form: FormData) {
   }
   const quantidade = numero(form, "quantidade") ?? 0;
   if (!descricao || quantidade <= 0) throw new Error("Informe o material e a quantidade.");
-  const { error } = await supabase.from("compra_itens").insert({ compra_id: compraId, produto_id: produtoId, descricao, quantidade, unidade: unidade ?? "un", preco_unitario: Math.max(0, preco ?? 0), ordem: 999 });
+  const { error } = await supabase.from("compra_itens").insert({ compra_id: compraId, produto_id: produtoId, descricao, quantidade, unidade: unidade ?? "un", preco_unitario: Math.max(0, preco ?? 0), pedido_id: texto(form, "pedido_id"), ordem: 999 });
   if (error) throw new Error(error.message);
   atualizar(`/compras/pedidos/${compraId}`);
 }
@@ -396,5 +396,13 @@ export async function receberCompra(compraId: string, form: FormData) {
     p_vencimento: form.get("lancar") !== null ? texto(form, "vencimento") : null,
   });
   if (error) throw new Error(error.message);
-  atualizar(`/compras/pedidos/${compraId}`, "/estoque/movimentos", "/financeiro");
+  atualizar(`/compras/pedidos/${compraId}`, "/estoque/movimentos", "/estoque/consumo", "/financeiro");
+}
+
+/** Marca (ou desmarca) para qual pedido/cliente o item foi comprado. Só registro: não reserva o material. */
+export async function marcarClienteDoItem(compraId: string, itemId: string, form: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("compra_itens").update({ pedido_id: texto(form, "pedido_id") }).eq("id", itemId).eq("compra_id", compraId);
+  if (error) throw new Error(error.message);
+  atualizar(`/compras/pedidos/${compraId}`, "/estoque/consumo");
 }

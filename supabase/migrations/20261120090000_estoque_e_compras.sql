@@ -3,7 +3,8 @@
 -- 2. Movimentação guarda a origem (compra, pedido, inventário, perda...) e o custo médio é recalculado na entrada.
 -- 3. Inventário (contagem do estoque) com ajuste automático do saldo.
 -- 4. Compras: requisições, cotações com vários fornecedores, pedidos de compra e recebimento.
--- 5. Saldo de cada produto passa a mostrar também o que já foi comprado e está a caminho.
+-- 5. Cada item de compra pode ser marcado para um pedido (cliente), sem reservar; o consumo por pedido fica registrado.
+-- 6. Saldo de cada produto passa a mostrar também o que já foi comprado e está a caminho.
 
 -- ───────────────────────── 1. Produto ─────────────────────────
 alter table public.produtos
@@ -28,7 +29,7 @@ create or replace function public.origem_do_movimento() returns trigger
 language plpgsql set search_path = public as $$
 begin
   if new.origem = 'manual' and new.pedido_id is not null and new.compra_id is null then
-    new.origem := 'pedido';
+    new.origem := case when new.tipo = 'entrada' then 'devolucao' else 'pedido' end;
   end if;
   return new;
 end $$;
@@ -129,8 +130,10 @@ create table if not exists public.cotacao_itens (
   descricao text not null,
   quantidade numeric(12,3) not null check (quantidade > 0),
   unidade text not null default 'un',
+  pedido_id uuid references public.pedidos(id) on delete set null,
   ordem integer not null default 0
 );
+create index if not exists cotacao_itens_pedido_id_idx on public.cotacao_itens (pedido_id);
 create index if not exists cotacao_itens_cotacao_id_idx on public.cotacao_itens (cotacao_id);
 create index if not exists cotacao_itens_produto_id_idx on public.cotacao_itens (produto_id);
 
@@ -185,8 +188,11 @@ create table if not exists public.compra_itens (
   unidade text not null default 'un',
   preco_unitario numeric(12,2) not null default 0 check (preco_unitario >= 0),
   recebido numeric(12,3) not null default 0 check (recebido >= 0),
+  -- Para qual pedido (cliente) o item foi comprado. Só registro: o material entra livre no estoque.
+  pedido_id uuid references public.pedidos(id) on delete set null,
   ordem integer not null default 0
 );
+create index if not exists compra_itens_pedido_id_idx on public.compra_itens (pedido_id);
 create index if not exists compra_itens_compra_id_idx on public.compra_itens (compra_id);
 create index if not exists compra_itens_produto_id_idx on public.compra_itens (produto_id);
 
@@ -277,10 +283,11 @@ begin
     continue when v_item.id is null;
     update compra_itens set recebido = recebido + v_qtd where id = v_item.id;
     if v_item.produto_id is not null then
+      -- sem pedido_id de propósito: a entrada fica livre no estoque (o gatilho do pedido conta entradas com pedido_id como devolução)
       insert into movimentos_estoque (produto_id, tipo, quantidade, custo_unitario, referencia, origem, compra_id, pedido_id)
       values (v_item.produto_id, 'entrada', v_qtd, nullif(v_item.preco_unitario, 0),
               concat_ws(' · ', format('Compra #%s', v_compra.numero), case when p_nota is not null then 'NF ' || p_nota end),
-              'compra', p_compra, v_compra.pedido_id);
+              'compra', p_compra, null);
     end if;
     v_valor := v_valor + v_qtd * v_item.preco_unitario;
     v_gravados := v_gravados || jsonb_build_object('item', v_item.id, 'descricao', v_item.descricao, 'quantidade', v_qtd);

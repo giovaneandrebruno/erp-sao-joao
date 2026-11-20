@@ -9,9 +9,10 @@ import { Copiar } from "@/components/copiar";
 import { BotaoImprimir } from "../../../pedidos/[id]/contrato/botao";
 import { brl, data, hojeISO, linkWhats } from "@/lib/format";
 import { COR_COMPRA, STATUS_COMPRA, qtd, totalDaCompra, type StatusCompra } from "@/lib/estoque";
-import { adicionarItemCompra, mudarStatusCompra, receberCompra, removerItemCompra, salvarCompra } from "../../actions";
+import { adicionarItemCompra, marcarClienteDoItem, mudarStatusCompra, receberCompra, removerItemCompra, salvarCompra } from "../../actions";
+import { ClienteDoItem } from "./cliente-item";
 
-type Item = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; preco_unitario: number; recebido: number };
+type Item = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; preco_unitario: number; recebido: number; pedido_id: string | null; pedido: { numero: number; cliente: { nome: string } | null } | null };
 type Receb = { id: string; recebido_em: string; nota_fiscal: string | null; conferido_por: string | null; observacoes: string | null; itens: { descricao: string; quantidade: number }[]; lancamento_id: string | null };
 
 const dec = (v: number | null | undefined) => (v === null || v === undefined || Number(v) === 0 ? "" : String(v).replace(".", ","));
@@ -22,7 +23,7 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
   const supabase = await createClient();
   const [{ data: compra }, { data: itensDb }, { data: recebDb }, { data: produtos }, { data: pedidos }, { data: cfg }, perfil] = await Promise.all([
     supabase.from("compras").select("*, fornecedor:fornecedor_id(nome, telefone, contato, cpf_cnpj, email), pedido:pedido_id(id, numero), cotacao:cotacao_id(id, numero)").eq("id", id).maybeSingle(),
-    supabase.from("compra_itens").select("id, produto_id, descricao, quantidade, unidade, preco_unitario, recebido").eq("compra_id", id).order("ordem"),
+    supabase.from("compra_itens").select("id, produto_id, descricao, quantidade, unidade, preco_unitario, recebido, pedido_id, pedido:pedido_id(numero, cliente:cliente_id(nome))").eq("compra_id", id).order("ordem"),
     supabase.from("recebimentos").select("id, recebido_em, nota_fiscal, conferido_por, observacoes, itens, lancamento_id").eq("compra_id", id).order("criado_em", { ascending: false }),
     supabase.from("produtos").select("id, nome, codigo, unidade_medida").eq("ativo", true).neq("tipo", "servico").order("nome"),
     supabase.from("pedidos").select("id, numero, cliente:cliente_id(nome)").in("status", ["aberto", "em_producao", "pronto"]).order("numero", { ascending: false }).limit(300),
@@ -30,7 +31,7 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
     perfilAtual(),
   ]);
   if (!compra) notFound();
-  const itens = (itensDb ?? []) as Item[];
+  const itens = (itensDb ?? []) as unknown as Item[];
   const recebimentos = (recebDb ?? []) as Receb[];
   const status = compra.status as StatusCompra;
   const editavel = ["rascunho", "enviado"].includes(status);
@@ -40,6 +41,8 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
   const cotacao = compra.cotacao as { id: string; numero: number } | null;
   const subtotal = itens.reduce((s, i) => s + Number(i.quantidade) * Number(i.preco_unitario), 0);
   const total = totalDaCompra({ frete: compra.frete, desconto: compra.desconto, itens });
+  const listaPedidos = ((pedidos ?? []) as unknown as { id: string; numero: number; cliente: { nome: string } | null }[]).map((p) => ({ id: p.id, rotulo: `${p.cliente?.nome ?? "Cliente"} · #${p.numero}` }));
+  const nomeDoItem = (i: Item) => (i.pedido ? `${i.pedido.cliente?.nome ?? "Cliente"} · #${i.pedido.numero}` : null);
   const falta = itens.reduce((s, i) => s + Math.max(0, Number(i.quantidade) - Number(i.recebido)) * Number(i.preco_unitario), 0);
   const atrasado = recebivel && compra.previsao_entrega && compra.previsao_entrega < hojeISO();
 
@@ -75,12 +78,13 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
   const receber = (
     <JanelaBotao rotulo="Receber material" titulo="Receber material" descricao="Confira o que chegou. A quantidade informada entra no estoque com o preço desta compra." icone="certo" largura="xl" aviso="Material recebido">
       <form action={receberCompra.bind(null, id)} className="flex flex-col gap-4">
-        <Tabela cabecalho={["Item", "Pedido", "Já recebido", "Chegou agora"]}>
+        <Tabela cabecalho={["Item", "Para", "Pedido", "Já recebido", "Chegou agora"]}>
           {itens.map((i) => {
             const resta = Math.max(0, Number(i.quantidade) - Number(i.recebido));
             return (
               <tr key={i.id}>
                 <td className="px-4 py-3 font-medium">{i.descricao}</td>
+                <td className="px-4 py-3">{nomeDoItem(i) ?? "Estoque"}</td>
                 <td className="px-4 py-3">{qtd(i.quantidade, i.unidade)}</td>
                 <td className="px-4 py-3">{qtd(i.recebido)}</td>
                 <td className="px-4 py-2"><input name={`r:${i.id}`} defaultValue={resta ? String(resta).replace(".", ",") : ""} inputMode="decimal" className={`${inputCls} w-28`} /></td>
@@ -102,6 +106,7 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
           </div>
         )}
         <div><Botao type="submit">Confirmar recebimento</Botao></div>
+        {itens.some((i) => i.pedido_id) && <p className="text-xs text-stone-500">Os itens marcados para um cliente entram livres no estoque. A marcação é só um lembrete para separar; se usar em outro pedido, não tem problema.</p>}
       </form>
     </JanelaBotao>
   );
@@ -160,15 +165,29 @@ export default async function CompraPage({ params }: PageProps<"/compras/pedidos
                   <Campo rotulo="Qtd *" className="md:col-span-2"><input name="quantidade" required inputMode="decimal" className={inputCls} /></Campo>
                   <Campo rotulo="Unid." className="md:col-span-2"><input name="unidade" className={inputCls} /></Campo>
                   <Campo rotulo="Preço unit. (R$)" className="md:col-span-2"><input name="preco_unitario" inputMode="decimal" placeholder="custo do cadastro" className={inputCls} /></Campo>
+                  <Campo rotulo="Para qual cliente (opcional)" className="md:col-span-6">
+                    <select name="pedido_id" defaultValue={pedidoCliente?.id ?? ""} className={inputCls}>
+                      <option value="">Estoque (sem cliente)</option>
+                      {listaPedidos.map((p) => <option key={p.id} value={p.id}>{p.rotulo}</option>)}
+                    </select>
+                  </Campo>
                   <div className="md:col-span-6"><Botao type="submit">Incluir</Botao></div>
                 </form>
               </JanelaBotao>
             )}
           </div>
-          <Tabela cabecalho={["Item", "Quantidade", "Preço unit.", "Total", "Recebido", ""]} vazio={!itens.length}>
+          <Tabela cabecalho={["Item", "Para qual cliente", "Quantidade", "Preço unit.", "Total", "Recebido", ""]} vazio={!itens.length}>
             {itens.map((i) => (
               <tr key={i.id}>
                 <td className="px-4 py-3 font-medium">{i.produto_id ? <Link href={`/estoque/${i.produto_id}`} className="text-madeira-800 hover:underline">{i.descricao}</Link> : i.descricao}</td>
+                <td className="px-4 py-2">
+                  <span className="print:hidden">
+                    {status !== "cancelado"
+                      ? <ClienteDoItem acao={marcarClienteDoItem.bind(null, id, i.id)} valor={i.pedido_id ?? ""} pedidos={i.pedido_id && !listaPedidos.some((p) => p.id === i.pedido_id) ? [...listaPedidos, { id: i.pedido_id, rotulo: nomeDoItem(i)! }] : listaPedidos} />
+                      : nomeDoItem(i) ?? "Estoque"}
+                  </span>
+                  <span className="hidden print:inline">{nomeDoItem(i) ?? "Estoque"}</span>
+                </td>
                 <td className="px-4 py-3">{qtd(i.quantidade, i.unidade)}</td>
                 <td className="px-4 py-3">{brl(i.preco_unitario)}</td>
                 <td className="px-4 py-3">{brl(Number(i.quantidade) * Number(i.preco_unitario))}</td>

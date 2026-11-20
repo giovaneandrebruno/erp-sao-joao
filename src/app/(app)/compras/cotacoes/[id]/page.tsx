@@ -9,7 +9,7 @@ import { brl, data, linkWhats } from "@/lib/format";
 import { COR_COTACAO, COR_COMPRA, STATUS_COTACAO, STATUS_COMPRA, qtd, type StatusCompra, type StatusCotacao } from "@/lib/estoque";
 import { adicionarFornecedorCotacao, adicionarItemCotacao, cancelarCotacao, fecharCotacao, removerFornecedorCotacao, removerItemCotacao, salvarRespostas } from "../../actions";
 
-type Item = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; precos: { fornecedor_id: string; preco_unitario: number }[] };
+type Item = { id: string; produto_id: string | null; descricao: string; quantidade: number; unidade: string; pedido: { numero: number; cliente: { nome: string } | null } | null; precos: { fornecedor_id: string; preco_unitario: number }[] };
 type Forn = { id: string; fornecedor_id: string; prazo_entrega_dias: number | null; condicao_pagamento: string | null; frete: number; fornecedor: { nome: string; telefone: string | null; contato: string | null } | null };
 
 const dec = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v).replace(".", ","));
@@ -18,14 +18,15 @@ const dec = (v: number | null | undefined) => (v === null || v === undefined ? "
 export default async function CotacaoPage({ params }: PageProps<"/compras/cotacoes/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: cot }, { data: itensDb }, { data: fornsDb }, { data: todosForn }, { data: produtos }, { data: compras }, { data: cfg }] = await Promise.all([
+  const [{ data: cot }, { data: itensDb }, { data: fornsDb }, { data: todosForn }, { data: produtos }, { data: compras }, { data: cfg }, { data: pedidos }] = await Promise.all([
     supabase.from("cotacoes").select("*").eq("id", id).maybeSingle(),
-    supabase.from("cotacao_itens").select("id, produto_id, descricao, quantidade, unidade, precos:cotacao_precos(fornecedor_id, preco_unitario)").eq("cotacao_id", id).order("ordem"),
+    supabase.from("cotacao_itens").select("id, produto_id, descricao, quantidade, unidade, pedido:pedido_id(numero, cliente:cliente_id(nome)), precos:cotacao_precos(fornecedor_id, preco_unitario)").eq("cotacao_id", id).order("ordem"),
     supabase.from("cotacao_fornecedores").select("id, fornecedor_id, prazo_entrega_dias, condicao_pagamento, frete, fornecedor:fornecedor_id(nome, telefone, contato)").eq("cotacao_id", id),
     supabase.from("fornecedores").select("id, nome").order("nome"),
     supabase.from("produtos").select("id, nome, codigo, unidade_medida").eq("ativo", true).neq("tipo", "servico").order("nome"),
     supabase.from("compras").select("id, numero, status, fornecedor:fornecedor_id(nome)").eq("cotacao_id", id),
     supabase.from("configuracoes").select("nome_fantasia").single(),
+    supabase.from("pedidos").select("id, numero, cliente:cliente_id(nome)").in("status", ["aberto", "em_producao", "pronto"]).order("numero", { ascending: false }).limit(300),
   ]);
   if (!cot) notFound();
   const itens = (itensDb ?? []) as unknown as Item[];
@@ -88,6 +89,12 @@ export default async function CotacaoPage({ params }: PageProps<"/compras/cotaco
               <Campo rotulo="Descrição" className="md:col-span-4"><input name="descricao" placeholder="Se não está no cadastro" className={inputCls} /></Campo>
               <Campo rotulo="Qtd *" className="md:col-span-1"><input name="quantidade" required inputMode="decimal" className={inputCls} /></Campo>
               <Campo rotulo="Unid." className="md:col-span-1"><input name="unidade" className={inputCls} /></Campo>
+              <Campo rotulo="Para qual cliente (opcional)" className="md:col-span-6">
+                <select name="pedido_id" className={inputCls}>
+                  <option value="">Estoque (sem cliente)</option>
+                  {(pedidos as unknown as { id: string; numero: number; cliente: { nome: string } | null }[] | null)?.map((p) => <option key={p.id} value={p.id}>{p.cliente?.nome} · pedido #{p.numero}</option>)}
+                </select>
+              </Campo>
               <div className="md:col-span-6"><Botao type="submit">Incluir</Botao></div>
             </form>
           </JanelaBotao>
@@ -132,7 +139,10 @@ export default async function CotacaoPage({ params }: PageProps<"/compras/cotaco
             <tbody className="divide-y divide-stone-100 [&_td]:px-5">
               {itens.map((i) => (
                 <tr key={i.id}>
-                  <td className="py-3 font-medium">{i.produto_id ? <Link href={`/estoque/${i.produto_id}`} className="text-madeira-800 hover:underline">{i.descricao}</Link> : i.descricao}</td>
+                  <td className="py-3 font-medium">
+                    {i.produto_id ? <Link href={`/estoque/${i.produto_id}`} className="text-madeira-800 hover:underline">{i.descricao}</Link> : i.descricao}
+                    {i.pedido && <div className="text-xs font-normal text-stone-500">para {i.pedido.cliente?.nome} · pedido #{i.pedido.numero}</div>}
+                  </td>
                   <td className="py-3">{qtd(i.quantidade, i.unidade)}</td>
                   {forns.map((f) => {
                     const p = preco(i, f.fornecedor_id);

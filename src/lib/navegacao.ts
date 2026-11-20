@@ -58,6 +58,7 @@ export const NAVEGACAO: Secao[] = [
           { href: "/estoque/movimentos", rotulo: "Movimentações", dica: "Entradas, saídas e ajustes" },
           { href: "/estoque/reservas", rotulo: "Reservas por pedido", dica: "Material separado para cada pedido" },
           { href: "/estoque/calcular", rotulo: "Calcular material", dica: "Chapas, fita e ferragens a partir das peças" },
+          { href: "/estoque/consumo", rotulo: "Consumo por cliente", dica: "Material usado e comprado para cada cliente" },
           { href: "/estoque/inventario", rotulo: "Inventário", dica: "Contagem do estoque e ajuste do saldo" },
           { href: "/estoque/sobras", rotulo: "Sobras de chapa", dica: "Retalhos para reaproveitar" },
         ],

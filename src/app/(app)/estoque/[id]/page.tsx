@@ -20,13 +20,13 @@ export default async function ProdutoPage({ params }: PageProps<"/estoque/[id]">
     supabase.from("fornecedores").select("id, nome").order("nome"),
     supabase.from("movimentos_estoque").select("*").eq("produto_id", id).order("criado_em", { ascending: false }).limit(100),
     supabase.from("pedido_materiais").select("id, quantidade, pedido:pedido_id(id, numero, status, cliente:cliente_id(nome))").eq("produto_id", id).eq("baixado", false),
-    supabase.from("compra_itens").select("id, quantidade, recebido, compra:compra_id(id, numero, status, previsao_entrega, fornecedor:fornecedor_id(nome))").eq("produto_id", id),
+    supabase.from("compra_itens").select("id, quantidade, recebido, pedido:pedido_id(numero, cliente:cliente_id(nome)), compra:compra_id(id, numero, status, previsao_entrega, fornecedor:fornecedor_id(nome))").eq("produto_id", id),
   ]);
   if (!produto) notFound();
 
   type Reserva = { id: string; quantidade: number; pedido: { id: string; numero: number; status: string; cliente: { nome: string } | null } | null };
   const reservasAbertas = ((reservas ?? []) as unknown as Reserva[]).filter((r) => r.pedido && !["cancelado", "entregue"].includes(r.pedido.status));
-  type ItemCompra = { id: string; quantidade: number; recebido: number; compra: { id: string; numero: number; status: StatusCompra; previsao_entrega: string | null; fornecedor: { nome: string } | null } | null };
+  type ItemCompra = { id: string; quantidade: number; recebido: number; pedido: { numero: number; cliente: { nome: string } | null } | null; compra: { id: string; numero: number; status: StatusCompra; previsao_entrega: string | null; fornecedor: { nome: string } | null } | null };
   const aCaminho = ((comprasAbertas ?? []) as unknown as ItemCompra[]).filter((c) => c.compra && ["rascunho", "enviado", "parcial"].includes(c.compra.status));
   const un = produto.unidade_medida;
 
@@ -114,11 +114,12 @@ export default async function ProdutoPage({ params }: PageProps<"/estoque/[id]">
               </div>
               <div>
                 <h2 className="mb-3 text-lg font-semibold">Compras em andamento</h2>
-                <Tabela cabecalho={["Compra", "Fornecedor", "Falta chegar", "Previsão", "Situação"]} vazio={!aCaminho.length}>
+                <Tabela cabecalho={["Compra", "Fornecedor", "Para", "Falta chegar", "Previsão", "Situação"]} vazio={!aCaminho.length}>
                   {aCaminho.map((c) => (
                     <tr key={c.id}>
                       <td className="px-4 py-3"><Link href={`/compras/pedidos/${c.compra!.id}`} className="font-medium text-madeira-800 hover:underline">#{c.compra!.numero}</Link></td>
                       <td className="px-4 py-3">{c.compra!.fornecedor?.nome ?? "—"}</td>
+                      <td className="px-4 py-3">{c.pedido ? `${c.pedido.cliente?.nome ?? "Cliente"} · #${c.pedido.numero}` : "Estoque"}</td>
                       <td className="px-4 py-3">{qtd(Math.max(0, Number(c.quantidade) - Number(c.recebido)), un)}</td>
                       <td className="px-4 py-3">{data(c.compra!.previsao_entrega)}</td>
                       <td className="px-4 py-3"><Selo cor={COR_COMPRA[c.compra!.status]}>{STATUS_COMPRA[c.compra!.status]}</Selo></td>
