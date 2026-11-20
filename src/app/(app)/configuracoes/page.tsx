@@ -129,6 +129,7 @@ export default async function ConfiguracoesPage() {
             {campo("comissao_vendedor_padrao", "Comissão do vendedor (%)")}
             {campo("comissao_arquiteto_padrao", "Comissão do arquiteto / RT (%)")}
             {campo("validade_orcamento_dias", "Validade do orçamento (dias)")}
+            {campo("orcamento_parado_dias", "Avisar orçamento sem resposta após (dias)")}
           </div>
         </Cartao>
 
@@ -150,6 +151,12 @@ export default async function ConfiguracoesPage() {
         </Cartao>
 
         <Cartao>
+          <h2 className="mb-1 font-semibold">Checklist de entrega e montagem</h2>
+          <p className="mb-4 text-sm text-stone-500">Aparece em cada pedido e no termo de entrega. Escreva um item por linha.</p>
+          <textarea name="checklist_entrega_itens" rows={6} defaultValue={String(v("checklist_entrega_itens") ?? "")} className={`${inputCls} w-full`} />
+        </Cartao>
+
+        <Cartao>
           <h2 className="mb-4 font-semibold">Cláusulas do contrato</h2>
           <textarea name="clausulas_contrato" rows={10} defaultValue={String(v("clausulas_contrato"))} className={`${inputCls} w-full`} />
         </Cartao>
@@ -164,6 +171,7 @@ export default async function ConfiguracoesPage() {
               ["msg_cobranca", "Lembrete de parcela"],
               ["msg_cobranca_vencida", "Cobrança de parcela vencida"],
               ["msg_pos_venda", "Pós-venda"],
+              ["msg_satisfacao", "Pesquisa de satisfação (nota de 0 a 10)"],
             ] as const).map(([k, r]) => (
               <Campo key={k} rotulo={r}>
                 <textarea name={k} rows={4} defaultValue={String(v(k) ?? "")} className={`${inputCls} w-full`} />

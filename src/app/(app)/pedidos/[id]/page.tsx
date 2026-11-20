@@ -2,13 +2,17 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Botao, Campo, Cartao, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
+import { Botao, Campo, Cartao, Selo, Tabela, Titulo, estiloBotao, inputCls } from "@/components/ui";
 import { ROTULOS, ROTULOS2, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
 import { atualizarMarco, criarOrdem, gerarParcelas, lancarComissoes, mudarStatusPedido } from "../actions";
 import { Previsao } from "../../orcamentos/previsao";
 import { JanelaBotao } from "@/components/janela";
 import { SeloStatus } from "../../producao/componentes";
 import { perfilAtual } from "@/lib/perfil";
+import { BotaoExcluir } from "@/components/acoes";
+import { adicionarMaterial, removerMaterial, salvarEntrega, salvarSatisfacao } from "../materiais-entrega";
+import { ImportarMateriais } from "./importar-materiais";
+import { FotosEntrega } from "./fotos-entrega";
 
 export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">) {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -22,8 +26,23 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
     supabase.from("lancamentos").select("*").eq("pedido_id", id).eq("tipo", "receber").order("vencimento"),
     supabase.from("pedido_marcos").select("*").eq("pedido_id", id),
     supabase.from("parceiros").select("id, nome").eq("tipo", "montador").eq("ativo", true).order("nome"),
-    supabase.from("configuracoes").select("margem_minima, nome_fantasia, msg_agendamento, msg_cobranca, msg_pos_venda").single(),
+    supabase.from("configuracoes").select("margem_minima, nome_fantasia, msg_agendamento, msg_cobranca, msg_pos_venda, msg_satisfacao, checklist_entrega_itens").single(),
   ]);
+  const [{ data: materiais }, { data: catalogo }, { data: extra }] = await Promise.all([
+    supabase.from("pedido_materiais").select("id, produto_id, quantidade, observacoes, baixado, produto:produto_id(nome, codigo, unidade_medida)").eq("pedido_id", id).order("criado_em"),
+    supabase.from("produtos").select("id, codigo, nome, unidade_medida").eq("ativo", true).neq("tipo", "servico").order("nome"),
+    supabase.from("pedidos").select("checklist_entrega, entrega_fotos, entrega_recebido_por, entrega_observacoes, satisfacao_nota, satisfacao_comentario, satisfacao_em").eq("id", id).maybeSingle(),
+  ]);
+  const idsMateriais = [...new Set((materiais ?? []).map((m) => m.produto_id))];
+  const { data: saldos } = idsMateriais.length
+    ? await supabase.from("produtos_saldo").select("id, estoque_atual, reservado, livre").in("id", idsMateriais)
+    : { data: [] };
+  const saldoDe = new Map((saldos ?? []).map((x) => [x.id, x]));
+  const itensChecklist = String(cfg?.checklist_entrega_itens ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+  const marcados = (extra?.checklist_entrega ?? {}) as Record<string, boolean>;
+  const feitosChecklist = itensChecklist.filter((x) => marcados[x]).length;
+  const fotosEntrega: string[] = extra?.entrega_fotos ?? [];
+  const { data: urlsEntrega } = fotosEntrega.length ? await supabase.storage.from("fotos").createSignedUrls(fotosEntrega, 3600) : { data: [] };
   const ordemMarcos = Object.keys(ROTULOS2.marco);
   const marcosOrdenados = (marcos ?? []).sort((a, b) => ordemMarcos.indexOf(a.tipo) - ordemMarcos.indexOf(b.tipo));
   const hoje = hojeISO();
@@ -176,6 +195,62 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
       <p className="mt-3 mb-8 text-right text-lg font-semibold">Total: {brl(p.total)}</p>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Materiais do pedido</h2>
+          <p className="text-xs text-stone-500">Chapas, fitas e ferragens que o pedido vai usar. Ficam reservados no estoque e saem sozinhos quando o pedido entra em produção.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <JanelaBotao rotulo="Importar planilha" titulo="Importar materiais da planilha" descricao={`Pedido #${p.numero} · arquivo .xlsx`} variante="secundario" icone="importar" largura="md" aviso={null}>
+            <ImportarMateriais pedidoId={id} produtos={catalogo ?? []} />
+          </JanelaBotao>
+          <JanelaBotao rotulo="Adicionar material" titulo="Adicionar material" descricao={`Pedido #${p.numero}`} variante="secundario" largura="xl">
+            <form action={adicionarMaterial.bind(null, id)} className="grid gap-3 md:grid-cols-12">
+              <Campo rotulo="Material *" className="md:col-span-5">
+                <select name="produto_id" required className={inputCls} defaultValue="">
+                  <option value="" disabled>Escolha no estoque</option>
+                  {catalogo?.map((x) => <option key={x.id} value={x.id}>{x.codigo ? `${x.codigo} · ` : ""}{x.nome} ({x.unidade_medida})</option>)}
+                </select>
+              </Campo>
+              <Campo rotulo="Quantidade *" className="md:col-span-2">
+                <input name="quantidade" required inputMode="decimal" className={inputCls} />
+              </Campo>
+              <Campo rotulo="Observação" className="md:col-span-3">
+                <input name="observacoes" placeholder="Cozinha, cor branco TX..." className={inputCls} />
+              </Campo>
+              <div className="flex items-end md:col-span-2"><Botao type="submit">Adicionar</Botao></div>
+            </form>
+          </JanelaBotao>
+        </div>
+      </div>
+      <div className="mb-8">
+        <Tabela cabecalho={["Material", "Qtd", "Em estoque", "Livre", "Situação", ""]} vazio={!materiais?.length}>
+          {materiais?.map((m) => {
+            const prod = m.produto as unknown as { nome: string; codigo: string | null; unidade_medida: string } | null;
+            const sd = saldoDe.get(m.produto_id);
+            const falta = Boolean(sd && Number(sd.livre) < 0);
+            return (
+              <tr key={m.id}>
+                <td className="px-4 py-3">
+                  <Link href={`/estoque/${m.produto_id}`} className="font-medium text-madeira-800 hover:underline">{prod?.nome ?? "Material"}</Link>
+                  {m.observacoes && <span className="block text-xs text-stone-500">{m.observacoes}</span>}
+                </td>
+                <td className="px-4 py-3">{Number(m.quantidade)} {prod?.unidade_medida}</td>
+                <td className="px-4 py-3">{sd ? Number(sd.estoque_atual) : "—"}</td>
+                <td className={`px-4 py-3 ${falta ? "font-semibold text-rosa" : ""}`}>{sd ? Number(sd.livre) : "—"}</td>
+                <td className="px-4 py-3">{m.baixado ? (falta ? <Selo cor="red">Saiu, estoque negativo</Selo> : <Selo cor="green">Saiu do estoque</Selo>) : falta ? <Selo cor="red">Falta comprar</Selo> : <Selo cor="blue">Reservado</Selo>}</td>
+                <td className="px-4 py-3 text-right">
+                  {!m.baixado && <BotaoExcluir acao={removerMaterial.bind(null, id, m.id)} titulo="Tirar este material do pedido?" detalhe={<strong>{prod?.nome}</strong>} aviso="Material retirado" />}
+                </td>
+              </tr>
+            );
+          })}
+        </Tabela>
+        {(materiais ?? []).some((m) => Number(saldoDe.get(m.produto_id)?.livre ?? 0) < 0) && (
+          <p className="mt-2 text-sm text-rosa">Falta material para este pedido. Veja a <Link href="/compras" className="font-semibold underline">lista de compras</Link>.</p>
+        )}
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Produção</h2>
         <JanelaBotao rotulo="Nova ordem de produção" titulo="Nova ordem de produção" descricao={`Pedido #${p.numero}`} variante="secundario" largura="xl">
           <form action={criarOrdem.bind(null, id)} className="grid gap-3 md:grid-cols-12">
@@ -205,6 +280,73 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           ))}
         </Tabela>
       </div>
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Entrega e montagem</h2>
+          <p className="text-xs text-stone-500">{itensChecklist.length ? `${feitosChecklist} de ${itensChecklist.length} itens conferidos` : "Cadastre os itens do checklist em Configurações."}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <FotosEntrega pedidoId={id} />
+          <Link href={`/pedidos/${id}/termo`} className={estiloBotao.secundario}>Termo de entrega (PDF)</Link>
+        </div>
+      </div>
+      <Cartao className="mb-8">
+        <form action={salvarEntrega.bind(null, id)} className="flex flex-col gap-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {itensChecklist.map((item) => (
+              <label key={item} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name={`item:${item}`} value="1" defaultChecked={Boolean(marcados[item])} className="h-4 w-4 accent-[#e37f33]" />
+                {item}
+              </label>
+            ))}
+          </div>
+          <div className="grid gap-3 md:grid-cols-12">
+            <Campo rotulo="Quem recebeu" className="md:col-span-4">
+              <input name="entrega_recebido_por" defaultValue={extra?.entrega_recebido_por ?? ""} placeholder="Nome de quem conferiu" className={inputCls} />
+            </Campo>
+            <Campo rotulo="Observações da entrega" className="md:col-span-6">
+              <input name="entrega_observacoes" defaultValue={extra?.entrega_observacoes ?? ""} placeholder="Ajustes que ficaram para depois..." className={inputCls} />
+            </Campo>
+            <div className="flex items-end md:col-span-2"><Botao type="submit">Salvar</Botao></div>
+          </div>
+        </form>
+        {(urlsEntrega?.length ?? 0) > 0 && (
+          <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {urlsEntrega!.map((u) => u.signedUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <a key={u.path} href={u.signedUrl} target="_blank" rel="noreferrer"><img src={u.signedUrl} alt="" className="aspect-square w-full rounded-lg object-cover" /></a>
+            ))}
+          </div>
+        )}
+      </Cartao>
+
+      {(p.status === "entregue" || extra?.satisfacao_nota !== null && extra?.satisfacao_nota !== undefined) && (
+        <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Pesquisa de satisfação</h2>
+            {(() => {
+              const link = zap(cfg?.msg_satisfacao, {});
+              return link ? <a href={link} target="_blank" rel="noreferrer" className="text-sm font-medium text-[#1da851] hover:underline">Pedir a nota no WhatsApp</a> : null;
+            })()}
+          </div>
+          <Cartao className="mb-8">
+            <form action={salvarSatisfacao.bind(null, id)} className="grid gap-3 md:grid-cols-12">
+              <Campo rotulo="Nota do cliente (0 a 10)" className="md:col-span-3">
+                <select name="satisfacao_nota" defaultValue={extra?.satisfacao_nota ?? ""} className={inputCls}>
+                  <option value="">Ainda sem resposta</option>
+                  {Array.from({ length: 11 }, (_, n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </Campo>
+              <Campo rotulo="O que o cliente disse" className="md:col-span-7">
+                <input name="satisfacao_comentario" defaultValue={extra?.satisfacao_comentario ?? ""} className={inputCls} />
+              </Campo>
+              <div className="flex items-end md:col-span-2"><Botao type="submit">Salvar</Botao></div>
+            </form>
+            {extra?.satisfacao_em && <p className="mt-2 text-xs text-stone-500">Respondida em {data(extra.satisfacao_em)}.</p>}
+          </Cartao>
+        </>
+      )}
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Recebimentos</h2>

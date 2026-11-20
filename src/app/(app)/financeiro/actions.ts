@@ -19,10 +19,25 @@ function dadosLancamento(form: FormData) {
   };
 }
 
+/** Mesmo dia em outro mês; se o mês for mais curto, cai no último dia (31/01 → 28/02). */
+function somarMeses(iso: string, meses: number) {
+  const [a, m, d] = iso.split("-").map(Number);
+  const ultimo = new Date(Date.UTC(a, m - 1 + meses + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(a, m - 1 + meses, Math.min(d, ultimo))).toISOString().slice(0, 10);
+}
+
 export async function criarLancamento(form: FormData) {
   await exigirAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.from("lancamentos").insert(dadosLancamento(form));
+  const base = dadosLancamento(form);
+  // conta que se repete: aluguel, energia, salários... lança os próximos meses de uma vez
+  const vezes = Math.min(60, Math.max(1, Math.round(numero(form, "repetir") ?? 1)));
+  const linhas = Array.from({ length: vezes }, (_, i) => ({
+    ...base,
+    descricao: vezes > 1 ? `${base.descricao} (${i + 1}/${vezes})` : base.descricao,
+    vencimento: somarMeses(base.vencimento, i),
+  }));
+  const { error } = await supabase.from("lancamentos").insert(linhas);
   if (error) throw new Error(error.message);
   revalidatePath("/financeiro");
 }
