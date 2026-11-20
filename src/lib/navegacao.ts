@@ -70,8 +70,6 @@ export const NAVEGACAO: Secao[] = [
         icone: "financeiro",
         filhos: [
           { href: "/financeiro", rotulo: "Lançamentos" },
-          { href: "/financeiro?tipo=receber", rotulo: "A receber" },
-          { href: "/financeiro?tipo=pagar", rotulo: "A pagar" },
           { href: "/financeiro?situacao=vencidos", rotulo: "Vencidos" },
           { href: "/financeiro/extrato", rotulo: "Conferir com o extrato", dica: "Marca como pago o que já caiu no banco" },
         ],
