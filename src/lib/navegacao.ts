@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -15,17 +15,17 @@ export type Secao = { titulo?: string; abas: Aba[] };
 export const NAVEGACAO: Secao[] = [
   { abas: [{ rotulo: "Painel", icone: "painel", href: "/" }] },
   {
-    titulo: "Vendas",
+    titulo: "Comercial",
     abas: [
       {
-        rotulo: "Comercial",
+        rotulo: "Vendas",
         icone: "vendas",
         filhos: [
           { href: "/crm", rotulo: "Funil de vendas", dica: "Negociações por etapa" },
           { href: "/orcamentos", rotulo: "Orçamentos", dica: "Propostas e aprovações" },
-          { href: "/agenda", rotulo: "Agenda", dica: "Medições, entregas e montagens" },
         ],
       },
+      { rotulo: "Agenda", icone: "agenda", href: "/agenda" },
       { rotulo: "Clientes", icone: "clientes", href: "/clientes" },
     ],
   },
