@@ -18,6 +18,7 @@ const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair"
   organograma: "M9.5 3.5h5v4h-5zM3.5 16.5h5v4h-5zM9.5 16.5h5v4h-5zM15.5 16.5h5v4h-5zM12 7.5v4.5M6 16.5V12h12v4.5M12 12v4.5",
   melhorias: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3",
   historico: "M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 2",
+  redes: "M7.5 3.5h9a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4h-9a4 4 0 0 1-4-4v-9a4 4 0 0 1 4-4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 7v.01",
   importar: "M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
   busca: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4",
   seta: "M9 6l6 6-6 6",

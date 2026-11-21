@@ -5,6 +5,7 @@ import { Icone } from "@/components/icones";
 import { AbasDoGrupo, Menu } from "./menu";
 import { Barra } from "./barra";
 import { Paleta } from "./paleta";
+import { RegistrarAcesso } from "./registrar-acesso";
 import { Avisos } from "@/components/acoes";
 import { sair } from "../login/actions";
 import { perfilAtual } from "@/lib/perfil";
@@ -84,6 +85,9 @@ export default function AppLayout({ children, modal }: LayoutProps<"/">) {
       <Avisos />
       <Suspense fallback={null}>
         <BuscaDoUsuario />
+      </Suspense>
+      <Suspense fallback={null}>
+        <RegistrarAcesso />
       </Suspense>
     </div>
   );
