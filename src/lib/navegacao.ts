@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -88,6 +88,15 @@ export const NAVEGACAO: Secao[] = [
           { href: "/financeiro", rotulo: "Lançamentos" },
           { href: "/financeiro?situacao=vencidos", rotulo: "Vencidos" },
           { href: "/financeiro/extrato", rotulo: "Conferir com o extrato", dica: "Marca como pago o que já caiu no banco" },
+        ],
+      },
+      {
+        rotulo: "Organograma",
+        icone: "organograma",
+        filhos: [
+          { href: "/organograma", rotulo: "Organograma", dica: "Quem responde a quem" },
+          { href: "/organograma/carga", rotulo: "Pessoas e carga", dica: "Quem está sobrecarregado e quem tem folga" },
+          { href: "/organograma/funcoes", rotulo: "Funções", dica: "O que precisa ser feito e quem faz" },
         ],
       },
       {
