@@ -10,7 +10,8 @@ const TABELAS = [
   "pedidos", "pedido_itens", "pedido_marcos", "ordens_producao", "producao_historico", "produtos",
   "movimentos_estoque", "pedido_materiais", "retalhos", "inventarios", "inventario_itens", "requisicoes_compra",
   "cotacoes", "cotacao_itens", "cotacao_fornecedores", "cotacao_precos", "compras", "compra_itens", "recebimentos",
-  "lancamentos", "chamados", "configuracoes", "melhorias",
+  "lancamentos", "chamados", "organograma_pessoas", "organograma_funcoes", "organograma_atribuicoes",
+  "configuracoes", "melhorias",
 ];
 
 const LOTE = 1000;
