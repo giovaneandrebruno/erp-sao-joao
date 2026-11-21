@@ -4,7 +4,7 @@ import { Selo, Tabela, Titulo, VerMais, estiloBotao, inputCls, quantidadeDaLista
 import { JanelaBotao } from "@/components/janela";
 import { AcoesLinha, BotaoExcluir } from "@/components/acoes";
 import { dataHora } from "@/lib/format";
-import { corDaIdade, haQuantoTempo } from "@/lib/curriculos";
+import { corDaIdade, haQuantoTempo, tipoDeVisualizacao } from "@/lib/curriculos";
 import { FormCurriculo } from "./form";
 import { excluirCurriculo } from "./actions";
 
@@ -16,7 +16,7 @@ export default async function CurriculosPage({ searchParams }: PageProps<"/curri
   const supabase = await createClient();
   let consulta = supabase
     .from("curriculos")
-    .select("id, nome, vaga, telefone, email, nome_arquivo, enviado_por_nome, criado_em, curriculo_anotacoes(count)", { count: "exact" })
+    .select("id, nome, vaga, telefone, email, nome_arquivo, tipo_arquivo, enviado_por_nome, criado_em, curriculo_anotacoes(count)", { count: "exact" })
     .order("criado_em", { ascending: false })
     .limit(qtd);
   const seguro = termo.replace(/[,()%*"\\]/g, " ").trim();
@@ -57,7 +57,7 @@ export default async function CurriculosPage({ searchParams }: PageProps<"/curri
               <td className="px-4 py-3">{notas ? `${notas} anotaç${notas === 1 ? "ão" : "ões"}` : <span className="text-stone-400">Nenhuma</span>}</td>
               <td className="px-4 py-2">
                 <AcoesLinha>
-                  <Link href={`/curriculos/${c.id}`} className={`${estiloBotao.secundario} !px-3 !py-1.5`}>Ver</Link>
+                  <Link href={`/curriculos/${c.id}`} className={`${estiloBotao.secundario} !px-3 !py-1.5`}>{tipoDeVisualizacao(c.nome_arquivo, c.tipo_arquivo) === "pdf" ? "Abrir PDF" : "Abrir arquivo"}</Link>
                   <BotaoExcluir
                     acao={excluirCurriculo.bind(null, c.id)}
                     titulo="Excluir este currículo?"
