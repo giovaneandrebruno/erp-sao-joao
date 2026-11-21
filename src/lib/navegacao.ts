@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -27,6 +27,17 @@ export const NAVEGACAO: Secao[] = [
       },
       { rotulo: "Agenda", icone: "agenda", href: "/agenda" },
       { rotulo: "Clientes", icone: "clientes", href: "/clientes" },
+      {
+        rotulo: "Redes sociais",
+        icone: "redes",
+        filhos: [
+          { href: "/redes", rotulo: "Visão geral", dica: "Instagram, Facebook e site num lugar só" },
+          { href: "/redes/mensagens", rotulo: "Mensagens", dica: "Directs do Instagram e mensagens da página" },
+          { href: "/redes/instagram", rotulo: "Instagram", dica: "Seguidores, alcance e melhores posts" },
+          { href: "/redes/facebook", rotulo: "Facebook", dica: "Seguidores, alcance e posts da página" },
+          { href: "/redes/site", rotulo: "Uso do site", dica: "Quem usa o sistema e propostas abertas" },
+        ],
+      },
     ],
   },
   {
