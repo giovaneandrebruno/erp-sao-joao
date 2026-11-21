@@ -14,6 +14,7 @@ const CAMINHOS: Record<NomeIcone | "busca" | "seta" | "mais" | "fechar" | "sair"
   equipe: "M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6zM9 12l2 2 4-4",
   configuracoes: "M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6",
   agenda: "M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM4 10h16M8 3v4M16 3v4",
+  curriculos: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 11.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5M8.5 16.5a3.5 3.5 0 0 1 7 0",
   importar: "M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
   busca: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4",
   seta: "M9 6l6 6-6 6",

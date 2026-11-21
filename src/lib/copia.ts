@@ -30,6 +30,8 @@ export const ASSUNTOS: Record<string, string> = {
   recebimentos: "Compras - recebimentos",
   lancamentos: "Financeiro",
   chamados: "Assistência técnica",
+  curriculos: "Currículos",
+  curriculo_anotacoes: "Currículos - anotações",
   configuracoes: "Configurações",
   perfis: "Usuários",
   agendas_google: "Agendas Google",
