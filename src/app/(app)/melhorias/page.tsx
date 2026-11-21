@@ -1,52 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
-import { Botao, Campo, Selo, Tabela, Titulo, inputCls } from "@/components/ui";
+import { Botao, Campo, Cartao, Selo, Titulo, inputCls } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
-import { AcoesLinha, BotaoCancelar, JanelaEditar, LinkEditar } from "@/components/acoes";
+import { BotaoCancelar, JanelaEditar, LinkEditar } from "@/components/acoes";
 import { perfilAtual } from "@/lib/perfil";
-import { data } from "@/lib/format";
+import { dataHora } from "@/lib/format";
 import { alterarMelhoria, sugerirMelhoria } from "./actions";
 
 type Melhoria = {
-  id: string; titulo: string; descricao: string | null; area: string | null; resultado: number; esforco: number;
+  id: string; titulo: string; descricao: string | null;
   situacao: "ideia" | "fazendo" | "feito" | "descartado"; sugerido_por: string | null; criado_em: string;
 };
 
-const SITUACAO = { ideia: ["Ideia", "stone"], fazendo: ["Fazendo", "amber"], feito: ["Feito", "green"], descartado: ["Descartado", "red"] } as const;
-const NOTAS = [1, 2, 3, 4, 5];
-
-/** Muito resultado com pouco esforço vem primeiro. */
-const prioridade = (m: Melhoria) => m.resultado * 2 - m.esforco;
-function quadrante(m: Melhoria) {
-  if (m.resultado >= 4 && m.esforco <= 2) return { texto: "Fazer primeiro", cor: "green" as const };
-  if (m.resultado >= 4) return { texto: "Planejar", cor: "blue" as const };
-  if (m.esforco <= 2) return { texto: "Quando sobrar tempo", cor: "amber" as const };
-  return { texto: "Repensar", cor: "stone" as const };
-}
+const SITUACAO = { ideia: ["Nova", "stone"], fazendo: ["Fazendo", "amber"], feito: ["Feito", "green"], descartado: ["Descartado", "red"] } as const;
 
 function FormMelhoria({ m, admin }: { m?: Melhoria; admin: boolean }) {
-  const nota = (nome: "resultado" | "esforco", rotulo: string) => (
-    <Campo rotulo={rotulo} className="md:col-span-2">
-      <select name={nome} defaultValue={m?.[nome] ?? 3} className={inputCls}>
-        {NOTAS.map((n) => <option key={n} value={n}>{n} {n === 1 ? "(pouco)" : n === 5 ? "(muito)" : ""}</option>)}
-      </select>
-    </Campo>
-  );
   return (
-    <form action={m ? alterarMelhoria.bind(null, m.id) : sugerirMelhoria} className="grid gap-3 md:grid-cols-6">
-      <Campo rotulo="O que melhorar *" className="md:col-span-4"><input name="titulo" required defaultValue={m?.titulo ?? ""} className={inputCls} /></Campo>
-      <Campo rotulo="Tela ou assunto" className="md:col-span-2"><input name="area" defaultValue={m?.area ?? ""} placeholder="Ex.: Orçamentos" className={inputCls} /></Campo>
-      <Campo rotulo="Detalhes" className="md:col-span-6"><textarea name="descricao" rows={3} defaultValue={m?.descricao ?? ""} className={inputCls} /></Campo>
-      {nota("resultado", "Quanto ajuda (1 a 5)")}
-      {nota("esforco", "Quanto trabalho dá (1 a 5)")}
+    <form action={m ? alterarMelhoria.bind(null, m.id) : sugerirMelhoria} className="grid gap-3">
+      <Campo rotulo="Título *"><input name="titulo" required defaultValue={m?.titulo ?? ""} placeholder="Ex.: Mostrar o telefone do cliente no pedido" className={inputCls} /></Campo>
+      <Campo rotulo="Descrição"><textarea name="descricao" rows={5} defaultValue={m?.descricao ?? ""} placeholder="Explique o que você gostaria que mudasse" className={inputCls} /></Campo>
       {m && admin && (
-        <Campo rotulo="Situação" className="md:col-span-2">
+        <Campo rotulo="Situação">
           <select name="situacao" defaultValue={m.situacao} className={inputCls}>
             {Object.entries(SITUACAO).map(([k, [r]]) => <option key={k} value={k}>{r}</option>)}
           </select>
         </Campo>
       )}
-      <div className="flex gap-2 md:col-span-6">
-        <Botao type="submit">{m ? "Salvar alterações" : "Salvar ideia"}</Botao>
+      {!m && <p className="text-xs text-stone-500">Seu nome e a data entram sozinhos.</p>}
+      <div className="flex gap-2">
+        <Botao type="submit">{m ? "Salvar alterações" : "Salvar anotação"}</Botao>
         {m && <BotaoCancelar />}
       </div>
     </form>
@@ -57,43 +38,45 @@ export default async function MelhoriasPage({ searchParams }: PageProps<"/melhor
   const { editar, ver } = await searchParams;
   const admin = (await perfilAtual())?.papel === "admin";
   const supabase = await createClient();
-  const { data: brutas } = await supabase.from("melhorias").select("*");
-  const todas = ((brutas ?? []) as Melhoria[]).sort((a, b) => prioridade(b) - prioridade(a) || a.criado_em.localeCompare(b.criado_em));
+  const { data: brutas } = await supabase
+    .from("melhorias")
+    .select("id, titulo, descricao, situacao, sugerido_por, criado_em")
+    .order("criado_em", { ascending: false });
+  const todas = (brutas ?? []) as Melhoria[];
   const verTodas = ver === "todas";
   const lista = verTodas ? todas : todas.filter((m) => m.situacao === "ideia" || m.situacao === "fazendo");
   const emEdicao = admin && typeof editar === "string" ? todas.find((m) => m.id === editar) : undefined;
 
   return (
     <>
-      <Titulo sub="Ideias para o sistema, em ordem: o que ajuda muito e dá pouco trabalho vem primeiro">Melhorias do sistema</Titulo>
+      <Titulo sub="Anote aqui o que pode melhorar no sistema. As mais novas aparecem primeiro.">Melhorias</Titulo>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <a href={verTodas ? "/melhorias" : "/melhorias?ver=todas"} className="text-sm text-stone-500 hover:text-stone-800">
           {verTodas ? "Mostrar só as abertas" : `Mostrar também as feitas e descartadas (${todas.length - lista.length})`}
         </a>
-        <JanelaBotao rotulo="Nova ideia" titulo="Nova ideia de melhoria" aviso="Ideia salva">
+        <JanelaBotao rotulo="Nova anotação" titulo="Nova anotação de melhoria" aviso="Anotação salva">
           <FormMelhoria admin={admin} />
         </JanelaBotao>
       </div>
-      <Tabela cabecalho={["O que melhorar", "Tela", "Ajuda", "Trabalho", "Prioridade", "Situação", "Sugerido por", ""]} vazio={!lista.length}>
-        {lista.map((m) => {
-          const q = quadrante(m);
-          return (
-            <tr key={m.id}>
-              <td className="px-4 py-3">
-                <div className="font-medium">{m.titulo}</div>
-                {m.descricao && <div className="mt-0.5 max-w-md text-xs text-stone-500">{m.descricao}</div>}
-              </td>
-              <td className="px-4 py-3">{m.area ?? "—"}</td>
-              <td className="px-4 py-3 font-mono">{m.resultado}</td>
-              <td className="px-4 py-3 font-mono">{m.esforco}</td>
-              <td className="px-4 py-3"><Selo cor={q.cor}>{q.texto}</Selo></td>
-              <td className="px-4 py-3"><Selo cor={SITUACAO[m.situacao][1]}>{SITUACAO[m.situacao][0]}</Selo></td>
-              <td className="px-4 py-3 text-xs text-stone-500">{m.sugerido_por ?? "—"}<br />{data(m.criado_em)}</td>
-              <td className="px-4 py-2">{admin && <AcoesLinha><LinkEditar id={m.id} /></AcoesLinha>}</td>
-            </tr>
-          );
-        })}
-      </Tabela>
+      {!lista.length && <Cartao><p className="text-sm text-stone-400">Nenhuma anotação ainda. Clique em &quot;Nova anotação&quot; para escrever a primeira.</p></Cartao>}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {lista.map((m) => (
+          <Cartao key={m.id} className="flex flex-col">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold leading-snug">{m.titulo}</h3>
+              <Selo cor={SITUACAO[m.situacao][1]}>{SITUACAO[m.situacao][0]}</Selo>
+            </div>
+            {m.descricao && <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">{m.descricao}</p>}
+            <div className="mt-auto flex items-end justify-between gap-2 pt-4 text-xs text-stone-500">
+              <div>
+                <div>Pedido por <span className="font-medium text-stone-700">{m.sugerido_por ?? "—"}</span></div>
+                <div>{dataHora(m.criado_em)}</div>
+              </div>
+              {admin && <LinkEditar id={m.id} />}
+            </div>
+          </Cartao>
+        ))}
+      </div>
       {emEdicao && (
         <JanelaEditar key={emEdicao.id} titulo="Alterar melhoria" descricao={emEdicao.titulo} aviso="Melhoria salva">
           <FormMelhoria m={emEdicao} admin={admin} />

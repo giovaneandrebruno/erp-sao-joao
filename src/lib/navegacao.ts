@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -117,14 +117,8 @@ export const NAVEGACAO: Secao[] = [
     titulo: "Sistema",
     abas: [
       { rotulo: "Importar arquivos", icone: "importar", href: "/importar" },
-      {
-        rotulo: "Melhorias e histórico",
-        icone: "analises",
-        filhos: [
-          { href: "/melhorias", rotulo: "Melhorias do sistema", dica: "Ideias com nota de ajuda e de trabalho" },
-          { href: "/historico", rotulo: "Histórico de alterações", dica: "Quem mudou o quê e quando" },
-        ],
-      },
+      { rotulo: "Melhorias", icone: "melhorias", href: "/melhorias" },
+      { rotulo: "Histórico de alterações", icone: "historico", href: "/historico" },
       { rotulo: "Equipe e parceiros", icone: "equipe", href: "/equipe" },
       { rotulo: "Configurações", icone: "configuracoes", href: "/configuracoes" },
     ],
