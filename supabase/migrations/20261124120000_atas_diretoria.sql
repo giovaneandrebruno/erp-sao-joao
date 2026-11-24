@@ -161,8 +161,7 @@ begin
   return new;
 end $$;
 
-drop trigger if exists recalcular_marcos_da_medicao on public.pedido_marcos;
-create trigger recalcular_marcos_da_medicao after update of realizado on public.pedido_marcos
+create or replace trigger recalcular_marcos_da_medicao after update of realizado on public.pedido_marcos
   for each row execute function public.recalcular_marcos_da_medicao();
 
 -- ================================================================ comissões
