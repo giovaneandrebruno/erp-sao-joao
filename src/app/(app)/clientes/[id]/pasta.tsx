@@ -2,11 +2,13 @@ import { Cartao, Selo, inputCls, estiloBotao } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
 import { BotaoExcluir } from "@/components/acoes";
 import { Icone } from "@/components/icones";
-import { dataHora } from "@/lib/format";
-import { DOCUMENTOS_ESSENCIAIS, TIPOS_DOCUMENTO, tamanhoLegivel, type TipoDocumento } from "@/lib/documentos";
+import { dataHora, hojeISO } from "@/lib/format";
+import { TIPOS_DOCUMENTO, tamanhoLegivel, type TipoDocumento } from "@/lib/documentos";
+import { ASSINATURAS, COR_PAGAMENTO, ROTULO_PAGAMENTO, SITUACOES, SITUACOES_ATENDIMENTO, nomeEtapa, situacaoAssinatura, type Etapa, type StatusPagamento } from "@/lib/processo";
+import { Botao, Campo } from "@/components/ui";
 import { FormDocumento } from "./pasta-form";
 import { Briefing, type BriefingDoCliente } from "./briefing";
-import { adicionarAnotacao, editarAnotacao, excluirAnotacao, excluirDocumento } from "./pasta-actions";
+import { adicionarAnotacao, devolverPasta, editarAnotacao, excluirAnotacao, excluirDocumento, marcarPastaCorrigida, salvarAtendimento } from "./pasta-actions";
 
 export type DocumentoDaPasta = {
   id: string; tipo: string; descricao: string | null; nome_arquivo: string; tamanho: number | null;
@@ -16,6 +18,15 @@ export type AnotacaoDaPasta = {
   id: string; texto: string; criado_por_nome: string | null; alterado_por_nome: string | null; criado_em: string; atualizado_em: string;
 };
 
+export type ProcessoDaPasta = {
+  etapa: Etapa | null;
+  pagamento: StatusPagamento | null;
+  pagamentoCombinado: { pedidoId: string; numero: number; texto: string | null }[];
+  devolucoes: { id: string; motivo: string; responsavel: string | null; devolvida_por_nome: string | null; criado_em: string }[];
+  pessoas: { user_id: string; nome: string | null; email: string | null }[];
+  atendimento: { situacao: string | null; responsavelId: string | null; prazo: string | null; desde: string | null };
+};
+
 const rotuloTipo = (t: string) => TIPOS_DOCUMENTO[t as TipoDocumento] ?? "Outro";
 
 /**
@@ -23,12 +34,14 @@ const rotuloTipo = (t: string) => TIPOS_DOCUMENTO[t as TipoDocumento] ?? "Outro"
  * Cliente fechado: pasta com os arquivos (pedido fechado, memorial, eletrodomésticos, referências...) + anotações;
  * o briefing feito lá no começo continua visível embaixo.
  */
-export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes, briefing }: {
+export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes, briefing, processo }: {
   clienteId: string; nome: string; fechado: boolean; documentos: DocumentoDaPasta[]; anotacoes: AnotacaoDaPasta[]; briefing: BriefingDoCliente;
+  processo: ProcessoDaPasta;
 }) {
   if (!fechado) {
     return (
       <>
+        <Atendimento clienteId={clienteId} processo={processo} />
         <h2 className="mb-3 text-lg font-semibold">Briefing do cliente novo</h2>
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2"><Briefing clienteId={clienteId} nome={nome} briefing={briefing} colunas={2} /></div>
@@ -49,14 +62,60 @@ export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes
         <Cartao className="lg:col-span-2">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              {DOCUMENTOS_ESSENCIAIS.map((t) => (
-                <Selo key={t} cor={tem.has(t) ? "green" : "amber"}>{rotuloTipo(t).replace(" (assinado)", "")}{tem.has(t) ? "" : ": falta"}</Selo>
+              {ASSINATURAS.map((a) => {
+                const s = situacaoAssinatura(a, tem, processo.etapa);
+                return <Selo key={a.tipo} cor={s === "tem" ? "green" : s === "falta" ? "amber" : "stone"}>{a.nome}{s === "falta" ? ": falta" : s === "depois" ? ": mais tarde" : ""}</Selo>;
+              })}
+              {processo.pagamento && <Selo cor={COR_PAGAMENTO[processo.pagamento]}>{ROTULO_PAGAMENTO[processo.pagamento]}</Selo>}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <JanelaBotao rotulo="Devolver para correção" titulo="Devolver a pasta para correção" descricao={`${nome} · o pedido não avança de etapa até a pasta ser corrigida`} variante="secundario" icone={null} largura="md" aviso="Pasta devolvida">
+                <form action={devolverPasta.bind(null, clienteId)} className="grid gap-3">
+                  <label className="grid gap-1 text-sm">
+                    <span className="text-xs font-medium text-stone-600">O que precisa corrigir *</span>
+                    <textarea name="motivo" required rows={4} placeholder="Endereço da obra incompleto, contrato sem assinatura, memorial faltando o ambiente da suíte..." className={inputCls} />
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    <span className="text-xs font-medium text-stone-600">Quem vai corrigir</span>
+                    <select name="responsavel_id" defaultValue="" className={inputCls}>
+                      <option value="">—</option>
+                      {processo.pessoas.map((p) => <option key={p.user_id} value={p.user_id}>{p.nome || p.email}</option>)}
+                    </select>
+                  </label>
+                  <button className={`${estiloBotao.primario} justify-self-end`}>Devolver</button>
+                </form>
+              </JanelaBotao>
+              <JanelaBotao rotulo="Adicionar arquivo" titulo="Adicionar arquivo à pasta" descricao={nome} largura="md" aviso={null}>
+                <FormDocumento clienteId={clienteId} tipoInicial={proximoTipo(tem)} />
+              </JanelaBotao>
+            </div>
+          </div>
+          {processo.etapa && <p className="-mt-2 mb-4 text-xs text-stone-500">Pedido na etapa <strong>{nomeEtapa(processo.etapa)}</strong>: o que já devia estar na pasta aparece como &quot;falta&quot;.</p>}
+
+          {processo.devolucoes.map((d) => (
+            <div key={d.id} className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-rosa/10 p-3 text-sm ring-1 ring-inset ring-rosa/30">
+              <div className="min-w-0">
+                <p className="font-medium text-rosa">Pasta devolvida para correção</p>
+                <p className="whitespace-pre-line text-stone-800">{d.motivo}</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {d.devolvida_por_nome ?? "Equipe"} · {dataHora(d.criado_em)}{d.responsavel ? ` · para ${d.responsavel} corrigir` : ""}
+                </p>
+              </div>
+              <form action={marcarPastaCorrigida.bind(null, d.id, clienteId)}><button className={`${estiloBotao.secundario} !px-3 !py-1.5`}>Marcar como corrigida</button></form>
+            </div>
+          ))}
+
+          {processo.pagamentoCombinado.length > 0 && (
+            <div className="mb-4 rounded-xl bg-stone-50 p-3 text-sm ring-1 ring-inset ring-stone-200">
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500">Forma de pagamento combinada no fechamento</p>
+              {processo.pagamentoCombinado.map((x) => (
+                <p key={x.pedidoId} className="mt-1 whitespace-pre-line text-stone-800">
+                  {processo.pagamentoCombinado.length > 1 && <strong>Pedido #{x.numero}: </strong>}
+                  {x.texto || <span className="text-amber-700">ainda não registrada (registre no pedido, em Recebimentos)</span>}
+                </p>
               ))}
             </div>
-            <JanelaBotao rotulo="Adicionar arquivo" titulo="Adicionar arquivo à pasta" descricao={nome} largura="md" aviso={null}>
-              <FormDocumento clienteId={clienteId} tipoInicial={tem.has("pedido_fechado") ? (tem.has("memorial_descritivo") ? "outro" : "memorial_descritivo") : "pedido_fechado"} />
-            </JanelaBotao>
-          </div>
+          )}
 
           {grupos.length ? (
             <div className="grid gap-5">
@@ -82,6 +141,50 @@ export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes
       {briefing && <div className="mb-8"><Briefing clienteId={clienteId} nome={nome} briefing={briefing} colunas={3} titulo="Briefing do primeiro atendimento" /></div>}
     </>
   );
+}
+
+/** Cliente novo: em que situação está o atendimento, com quem e até quando. */
+function Atendimento({ clienteId, processo }: { clienteId: string; processo: ProcessoDaPasta }) {
+  const a = processo.atendimento;
+  const hoje = hojeISO();
+  const vencido = Boolean(a.prazo && a.prazo < hoje);
+  const atual = a.situacao && a.situacao in SITUACOES ? SITUACOES[a.situacao as keyof typeof SITUACOES] : null;
+  return (
+    <Cartao className="mb-8">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-semibold">Situação do atendimento</h3>
+          <p className="text-xs text-stone-500">
+            {atual ? <>{atual.nome}{"detalhe" in atual && atual.detalhe ? ` (${atual.detalhe})` : ""} · cargo: {atual.responsavel}{a.desde ? ` · desde ${dataHora(a.desde)}` : ""}</> : "Escolha a situação, quem cuida e até quando."}
+          </p>
+        </div>
+        {vencido && <Selo cor="red">prazo vencido</Selo>}
+      </div>
+      <form action={salvarAtendimento.bind(null, clienteId)} className="grid gap-3 md:grid-cols-12">
+        <Campo rotulo="Situação" className="md:col-span-4">
+          <select name="atendimento_situacao" defaultValue={a.situacao ?? ""} className={inputCls}>
+            <option value="">—</option>
+            {SITUACOES_ATENDIMENTO.map((k) => <option key={k} value={k}>{SITUACOES[k].nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Responsável" className="md:col-span-3">
+          <select name="atendimento_responsavel_id" defaultValue={a.responsavelId ?? ""} className={inputCls}>
+            <option value="">—</option>
+            {processo.pessoas.map((p) => <option key={p.user_id} value={p.user_id}>{p.nome || p.email}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Prazo (vazio = sugestão)" className="md:col-span-3">
+          <input type="date" name="atendimento_prazo" defaultValue={a.prazo ?? ""} className={inputCls} />
+        </Campo>
+        <div className="flex items-end md:col-span-2"><Botao type="submit">Salvar</Botao></div>
+      </form>
+    </Cartao>
+  );
+}
+
+/** Tipo sugerido ao adicionar arquivo: o primeiro documento obrigatório que ainda falta. */
+function proximoTipo(tem: Set<string>): TipoDocumento {
+  return ASSINATURAS.find((a) => !tem.has(a.tipo) && !(a.ou && tem.has(a.ou)))?.tipo ?? "outro";
 }
 
 function LinhaDocumento({ d, clienteId }: { d: DocumentoDaPasta; clienteId: string }) {

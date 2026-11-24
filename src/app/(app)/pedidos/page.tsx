@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Selo, Tabela, Titulo, VerMais, quantidadeDaLista } from "@/components/ui";
 import { COR_PEDIDO, ROTULOS, brl, data } from "@/lib/format";
+import { SeloStatus } from "../producao/componentes";
 
 export default async function PedidosPage({ searchParams }: PageProps<"/pedidos">) {
   const sp = await searchParams;
@@ -15,6 +16,11 @@ export default async function PedidosPage({ searchParams }: PageProps<"/pedidos"
     .limit(qtd);
   if (typeof status === "string" && status in COR_PEDIDO) consulta = consulta.eq("status", status);
   const { data: pedidos, count } = await consulta;
+  const ids = (pedidos ?? []).map((x) => x.id);
+  // etapa SCRUM das OS de cada pedido (quadro da Produção)
+  const { data: ordens } = ids.length
+    ? await supabase.from("ordens_producao").select("pedido_id, status_pcp").in("pedido_id", ids)
+    : { data: [] };
 
   return (
     <>
@@ -26,13 +32,19 @@ export default async function PedidosPage({ searchParams }: PageProps<"/pedidos"
           <Link key={k} href={`/pedidos?status=${k}`} className={status === k ? "font-semibold text-madeira-800" : "text-stone-500"}>{r}</Link>
         ))}
       </div>
-      <Tabela cabecalho={["Nº", "Cliente", "Unidade", "Entrega prevista", "Status", "Total"]} vazio={!pedidos?.length}>
+      <Tabela cabecalho={["Nº", "Cliente", "Unidade", "Entrega prevista", "Etapa (SCRUM)", "Status", "Total"]} vazio={!pedidos?.length}>
         {pedidos?.map((p) => (
           <tr key={p.id} className="hover:bg-stone-50">
             <td className="px-4 py-3"><Link href={`/pedidos/${p.id}`} className="font-medium text-madeira-800 hover:underline">#{p.numero}</Link></td>
             <td className="px-4 py-3">{p.cliente_nome}</td>
             <td className="px-4 py-3">{ROTULOS.unidade[p.unidade as keyof typeof ROTULOS.unidade]}</td>
             <td className="px-4 py-3">{data(p.data_entrega_prevista)}</td>
+            <td className="px-4 py-3">
+              <span className="flex flex-wrap gap-1">
+                {(ordens ?? []).filter((o) => o.pedido_id === p.id).map((o, k) => <SeloStatus key={k} sigla={o.status_pcp} />)}
+                {!(ordens ?? []).some((o) => o.pedido_id === p.id) && <span className="text-xs text-stone-400">sem OS</span>}
+              </span>
+            </td>
             <td className="px-4 py-3"><Selo cor={COR_PEDIDO[p.status as keyof typeof COR_PEDIDO]}>{ROTULOS.statusPedido[p.status as keyof typeof COR_PEDIDO]}</Selo></td>
             <td className="px-4 py-3">{brl(p.total)}</td>
           </tr>

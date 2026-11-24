@@ -7,6 +7,7 @@ import { AtualizarSozinho } from "@/components/atualizar";
 import { perfilAtual } from "@/lib/perfil";
 import { situacaoPrazo } from "@/lib/pcp";
 import { Icone, type NomeDoIcone } from "@/components/icones";
+import { avisosDoProcesso } from "@/lib/processo-avisos";
 
 export default async function PainelPage() {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -66,6 +67,13 @@ export default async function PainelPage() {
   ];
 
   const [destaque, ...resto] = cards;
+
+  // pedidos para dar atenção: datas limite vencendo, situações com prazo vencido e pastas devolvidas (os seus primeiro)
+  const eu = (await perfilAtual())?.user_id ?? null;
+  const avisosPedidos = (await avisosDoProcesso(supabase, hoje, 3))
+    .map((a) => ({ ...a, meu: Boolean(eu && a.responsavelId === eu) }))
+    .sort((a, b) => Number(b.meu) - Number(a.meu))
+    .slice(0, 8);
 
   // propostas que o cliente abriu nas últimas 48 horas: hora de ligar
   const agora = instante();
@@ -223,6 +231,24 @@ export default async function PainelPage() {
         ))}
       </div>
 
+      {avisosPedidos.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Pedidos e clientes para dar atenção</h2>
+          <Cartao className="filete">
+            <ul className={lista}>
+              {avisosPedidos.map((a) => (
+                <li key={a.chave} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                  <Link href={a.href} className="text-stone-800 transition hover:text-ciano">
+                    {a.numero && <span className="font-mono font-semibold text-violeta">#{a.numero}</span>} {a.cliente}
+                    <span className={a.vencido ? "text-rosa" : "text-stone-500"}> · {a.motivo}</span>
+                  </Link>
+                  {a.meu && <span className="text-xs font-semibold text-laranja">com você</span>}
+                </li>
+              ))}
+            </ul>
+          </Cartao>
+        </section>
+      )}
       {atencao.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Orçamentos para dar atenção</h2>

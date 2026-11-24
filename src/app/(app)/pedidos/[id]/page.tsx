@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Botao, Campo, Cartao, Selo, Tabela, Titulo, estiloBotao, inputCls } from "@/components/ui";
-import { ROTULOS, ROTULOS2, brl, data, hojeISO, linkWhats, preencher } from "@/lib/format";
+import { ROTULOS, ROTULOS2, brl, data, dataHora, hojeISO, linkWhats, preencher } from "@/lib/format";
 import { atualizarMarco, criarOrdem, gerarParcelas, lancarComissoes, mudarStatusPedido } from "../actions";
 import { Previsao } from "../../orcamentos/previsao";
 import { JanelaBotao } from "@/components/janela";
@@ -13,6 +13,14 @@ import { BotaoExcluir } from "@/components/acoes";
 import { adicionarMaterial, removerMaterial, salvarEntrega, salvarSatisfacao } from "../materiais-entrega";
 import { ImportarMateriais } from "./importar-materiais";
 import { FotosEntrega } from "./fotos-entrega";
+import { FormOcorrencia } from "./ocorrencia-form";
+import { abrirAssistenciaDaOcorrencia, excluirOcorrencia, mudarEtapaScrum, resolverOcorrencia, salvarChecklist, salvarDatasLimite, salvarMotivoCancelamento, salvarPagamentoCombinado } from "../processo-actions";
+import { STATUS_PCP } from "@/lib/pcp";
+import {
+  CHECKLISTS, COR_PAGAMENTO, LINHA_PRINCIPAL, MOTIVOS_CANCELAMENTO, ROTULO_PAGAMENTO, TIPOS_OCORRENCIA,
+  checklistDaEtapa, etapaDoPedido, pendenciasParaAvancar, progressoChecklist, statusPagamento,
+  type ChaveChecklist, type Etapa, type MarcasChecklists, type TipoOcorrencia,
+} from "@/lib/processo";
 
 export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">) {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -31,8 +39,9 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
   const [{ data: materiais }, { data: catalogo }, { data: extra }] = await Promise.all([
     supabase.from("pedido_materiais").select("id, produto_id, quantidade, observacoes, baixado, produto:produto_id(nome, codigo, unidade_medida)").eq("pedido_id", id).order("criado_em"),
     supabase.from("produtos").select("id, codigo, nome, unidade_medida").eq("ativo", true).neq("tipo", "servico").order("nome"),
-    supabase.from("pedidos").select("checklist_entrega, entrega_fotos, entrega_recebido_por, entrega_observacoes, satisfacao_nota, satisfacao_comentario, satisfacao_em").eq("id", id).maybeSingle(),
+    supabase.from("pedidos").select("checklist_entrega, entrega_fotos, entrega_recebido_por, entrega_observacoes, satisfacao_nota, satisfacao_comentario, satisfacao_em, checklists, data_limite_assinatura, data_limite_entrega, pagamento_combinado, cancelamento_motivo").eq("id", id).maybeSingle(),
   ]);
+  const { data: ocorrencias } = await supabase.from("pedido_ocorrencias").select("id, tipo, ambiente, descricao, fotos, chamado_id, resolvida_em, criado_por_nome, criado_em").eq("pedido_id", id).order("criado_em", { ascending: false });
   const idsMateriais = [...new Set((materiais ?? []).map((m) => m.produto_id))];
   const { data: saldos } = idsMateriais.length
     ? await supabase.from("produtos_saldo").select("id, estoque_atual, reservado, livre").in("id", idsMateriais)
@@ -55,6 +64,32 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
   const fotos = (visitas ?? []).flatMap((v) => v.fotos ?? []);
   const { data: urls } = fotos.length ? await supabase.storage.from("fotos").createSignedUrls(fotos, 3600) : { data: [] };
   const urlDe = new Map((urls ?? []).map((u) => [u.path, u.signedUrl]));
+  const fotosOcorrencias = (ocorrencias ?? []).flatMap((o) => o.fotos ?? []);
+  const { data: urlsOcorr } = fotosOcorrencias.length ? await supabase.storage.from("fotos").createSignedUrls(fotosOcorrencias, 3600) : { data: [] };
+  const urlOcorr = new Map((urlsOcorr ?? []).map((u) => [u.path, u.signedUrl]));
+  // processo: a etapa SCRUM das OS do pedido (quadro da Produção), o que falta, pasta e pagamento
+  const etapa: Etapa = etapaDoPedido((ordens ?? []).map((o) => o.status_pcp));
+  const marcasChecklists = (extra?.checklists ?? {}) as MarcasChecklists;
+  const [{ data: docsCliente }, { data: devolucoes }] = await Promise.all([
+    supabase.from("cliente_documentos").select("tipo").eq("cliente_id", p.cliente_id),
+    supabase.from("cliente_pasta_devolucoes").select("id, motivo, devolvida_por_nome, criado_em").eq("cliente_id", p.cliente_id).is("corrigida_em", null),
+  ]);
+  const proxima = LINHA_PRINCIPAL[LINHA_PRINCIPAL.indexOf(etapa) + 1] as Etapa | undefined;
+  // tudo o que já devia estar pronto até sair da fase atual (pasta, pagamento combinado e checklists)
+  const pendencias = proxima && p.status !== "cancelado"
+    ? pendenciasParaAvancar({ etapaAtual: "pre_venda", destino: proxima, documentos: new Set((docsCliente ?? []).map((d) => d.tipo)), checklists: marcasChecklists, pagamentoCombinado: extra?.pagamento_combinado, pastaDevolvida: (devolucoes?.length ?? 0) > 0 })
+    : [];
+  const checklistDaVez = checklistDaEtapa(etapa);
+  const pagamento = statusPagamento(Number(p.total), parcelas ?? [], hoje);
+  const diasAte = (d: string | null | undefined) => (d ? Math.round((Date.parse(`${d}T12:00:00`) - Date.parse(`${hoje}T12:00:00`)) / 864e5) : null);
+  const avisoData = (d: string | null | undefined, feito: boolean) => {
+    const n = diasAte(d);
+    if (n === null || feito) return null;
+    if (n < 0) return <Selo cor="red">venceu há {-n} dia(s)</Selo>;
+    if (n <= 7) return <Selo cor="amber">{n === 0 ? "vence hoje" : `vence em ${n} dia(s)`}</Selo>;
+    return null;
+  };
+  const passouDe = (e: Etapa) => LINHA_PRINCIPAL.indexOf(etapa) > LINHA_PRINCIPAL.indexOf(e) || p.status === "entregue" || p.status === "cancelado";
   const primeiroNome = p.cliente_nome?.split(" ")[0];
   const zap = (modelo: string | null | undefined, extra: Record<string, string>) =>
     linkWhats(cli?.telefone, preencher(modelo ?? "", { cliente: primeiroNome, empresa: cfg?.nome_fantasia, ...extra }));
@@ -93,6 +128,82 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
             <input type="date" name="data_entrega_prevista" defaultValue={p.data_entrega_prevista ?? ""} className={inputCls} />
           </Campo>
           <Botao type="submit">Salvar</Botao>
+        </form>
+      </Cartao>
+
+      {p.status === "cancelado" && (
+        <Cartao className="mb-8">
+          <h3 className="mb-1 font-semibold">Motivo do cancelamento</h3>
+          {extra?.cancelamento_motivo && <p className="mb-3 text-sm text-stone-700">{extra.cancelamento_motivo}</p>}
+          <form action={salvarMotivoCancelamento.bind(null, id)} className="flex flex-wrap items-end gap-4">
+            <Campo rotulo="Motivo *">
+              <select name="motivo" required defaultValue="" className={inputCls}>
+                <option value="" disabled>Escolha</option>
+                {Object.entries(MOTIVOS_CANCELAMENTO).map(([k, r]) => <option key={k} value={k}>{r}</option>)}
+              </select>
+            </Campo>
+            <Campo rotulo="Detalhe" className="min-w-72 flex-1">
+              <input name="detalhe" placeholder="O que o cliente disse, onde comprou, valor..." className={inputCls} />
+            </Campo>
+            <Botao type="submit" variante="secundario">Salvar motivo</Botao>
+          </form>
+        </Cartao>
+      )}
+
+      <Cartao className="mb-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold">Processo do pedido (SCRUM)</h3>
+            <p className="text-xs text-stone-500">A mesma etapa do <Link href="/producao" className="text-madeira-700 hover:underline">quadro da Produção</Link>. Mudando aqui, muda lá, e o contrário também.</p>
+          </div>
+        </div>
+        {(ordens?.length ?? 0) > 0 ? (
+          <div className="grid gap-2">
+            {ordens!.map((o) => (
+              <form key={o.id} action={mudarEtapaScrum.bind(null, id, o.id)} className="flex flex-wrap items-center gap-3 text-sm">
+                <Link href={`/producao/${o.id}`} className="w-44 truncate font-medium text-madeira-800 hover:underline">{o.os ? `OS ${o.os}` : `#${o.numero}`} · {o.descricao}</Link>
+                <SeloStatus sigla={o.status_pcp} nome />
+                <select name="status_pcp" defaultValue={o.status_pcp} className={`${inputCls} w-auto py-1`}>
+                  {STATUS_PCP.map((x) => <option key={x.sigla} value={x.sigla}>{x.sigla} · {x.nome}</option>)}
+                </select>
+                <Botao type="submit" variante="secundario" className="!px-3 !py-1.5">Mudar etapa</Botao>
+              </form>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-stone-500">Este pedido ainda não tem ordem de serviço. Crie em <strong>Nova ordem de produção</strong>, mais abaixo, para ele entrar no quadro.</p>
+        )}
+        {(devolucoes?.length ?? 0) > 0 && (
+          <p className="mt-4 rounded-xl bg-rosa/10 p-3 text-sm text-rosa ring-1 ring-inset ring-rosa/30">
+            Pasta devolvida para correção: {devolucoes!.map((d) => d.motivo.replace(/[.\s]+$/, "")).join(" · ")}. <Link href={`/clientes/${p.cliente_id}`} className="font-semibold underline">Abrir a pasta</Link>
+          </p>
+        )}
+        {p.status !== "cancelado" && (
+          <div className="mt-4 text-sm">
+            {pendencias.length ? (
+              <>
+                <p className="font-medium text-stone-700">O que falta até a próxima fase:</p>
+                <ul className="mt-1 list-disc pl-5 text-stone-600">{pendencias.map((x) => <li key={x}>{x}</li>)}</ul>
+              </>
+            ) : proxima ? (
+              <p className="text-neon">Pasta, pagamento combinado e checklists em dia para esta fase.</p>
+            ) : null}
+          </div>
+        )}
+        <form action={salvarDatasLimite.bind(null, id)} className="mt-5 flex flex-wrap items-end gap-4 border-t border-stone-100 pt-4">
+          <Campo rotulo="DLP: limite para o cliente assinar o executivo">
+            <div className="flex items-center gap-2">
+              <input type="date" name="data_limite_assinatura" defaultValue={extra?.data_limite_assinatura ?? ""} className={inputCls} />
+              {avisoData(extra?.data_limite_assinatura, passouDe("executivo"))}
+            </div>
+          </Campo>
+          <Campo rotulo="DLE: data limite de entrega">
+            <div className="flex items-center gap-2">
+              <input type="date" name="data_limite_entrega" defaultValue={extra?.data_limite_entrega ?? ""} className={inputCls} />
+              {avisoData(extra?.data_limite_entrega, passouDe("entrega"))}
+            </div>
+          </Campo>
+          <Botao type="submit" variante="secundario">Salvar datas</Botao>
         </form>
       </Cartao>
 
@@ -145,6 +256,31 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           </div>
           <p className="mt-2 text-xs text-stone-500">Primeira data: previsto. Segunda: realizado.</p>
         </Cartao>
+      </div>
+
+      <h2 className="mb-3 text-lg font-semibold">Checklists do processo</h2>
+      <div className="mb-8 grid gap-4 lg:grid-cols-3">
+        {(Object.keys(CHECKLISTS) as ChaveChecklist[]).map((c) => {
+          const prog = progressoChecklist(marcasChecklists, c);
+          return (
+            <Cartao key={c}>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h3 className="font-semibold">{CHECKLISTS[c].nome}{c === checklistDaVez && <span className="ml-2 text-xs font-medium text-laranja">fase atual</span>}</h3>
+                <Selo cor={prog.completo ? "green" : prog.feitos ? "amber" : "stone"}>{prog.feitos} de {prog.total}</Selo>
+              </div>
+              <p className="mb-3 text-xs text-stone-500">{CHECKLISTS[c].periodo}{c === "finalizacao_obra" ? ` · ${fotosEntrega.length} foto(s) da entrega` : ""}</p>
+              <form action={salvarChecklist.bind(null, id, c)} className="flex flex-col gap-2">
+                {CHECKLISTS[c].itens.map((item) => (
+                  <label key={item} className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" name={`item:${item}`} value="1" defaultChecked={Boolean(marcasChecklists[c]?.[item])} className="mt-0.5 h-4 w-4 shrink-0 accent-[#e37f33]" />
+                    {item}
+                  </label>
+                ))}
+                <Botao type="submit" variante="secundario" className="mt-2 self-end">Salvar</Botao>
+              </form>
+            </Cartao>
+          );
+        })}
       </div>
 
       {(visitas?.length ?? 0) > 0 && (
@@ -323,6 +459,44 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
         )}
       </Cartao>
 
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Ocorrências da montagem</h2>
+          <p className="text-xs text-stone-500">Embalagem avariada, peça com defeito ou faltando, cortes e peças extras, com foto. Viram chamado de assistência com um clique.</p>
+        </div>
+        <JanelaBotao rotulo="Registrar ocorrência" titulo="Registrar ocorrência da montagem" descricao={`Pedido #${p.numero}`} variante="secundario" largura="lg" aviso={null}>
+          <FormOcorrencia pedidoId={id} />
+        </JanelaBotao>
+      </div>
+      <div className="mb-8 grid gap-4 md:grid-cols-2">
+        {ocorrencias?.map((o) => (
+          <Cartao key={o.id}>
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <span className="font-medium">{TIPOS_OCORRENCIA[o.tipo as TipoOcorrencia] ?? "Ocorrência"}</span>
+              {o.ambiente && <span className="text-xs text-stone-500">{o.ambiente}</span>}
+              {o.resolvida_em ? <Selo cor="green">resolvida {data(o.resolvida_em)}</Selo> : <Selo cor="amber">em aberto</Selo>}
+              {o.chamado_id && <Link href="/assistencia" className="text-xs text-madeira-700 hover:underline">virou assistência</Link>}
+            </div>
+            <p className="text-sm text-stone-700">{o.descricao}</p>
+            <p className="mt-1 text-xs text-stone-500">{dataHora(o.criado_em)}{o.criado_por_nome ? `, por ${o.criado_por_nome}` : ""}</p>
+            {(o.fotos?.length ?? 0) > 0 && (
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {o.fotos!.map((f: string) => urlOcorr.get(f) && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <a key={f} href={urlOcorr.get(f)!} target="_blank" rel="noreferrer"><img src={urlOcorr.get(f)!} alt="" className="aspect-square w-full rounded-lg object-cover" /></a>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+              <form action={resolverOcorrencia.bind(null, id, o.id, !o.resolvida_em)}><button className="text-madeira-700 hover:underline">{o.resolvida_em ? "reabrir" : "marcar como resolvida"}</button></form>
+              {!o.chamado_id && <form action={abrirAssistenciaDaOcorrencia.bind(null, id, o.id)}><button className="text-madeira-700 hover:underline">abrir assistência</button></form>}
+              <BotaoExcluir acao={excluirOcorrencia.bind(null, id, o.id)} titulo="Excluir esta ocorrência?" aviso="Ocorrência excluída" />
+            </div>
+          </Cartao>
+        ))}
+        {!ocorrencias?.length && <Cartao className="md:col-span-2"><p className="text-sm text-stone-400">Nenhuma ocorrência registrada.</p></Cartao>}
+      </div>
+
       {(p.status === "entregue" || extra?.satisfacao_nota !== null && extra?.satisfacao_nota !== undefined) && (
         <>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -351,7 +525,10 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
       )}
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Recebimentos</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold">Recebimentos</h2>
+          <Selo cor={COR_PAGAMENTO[pagamento.status]}>{ROTULO_PAGAMENTO[pagamento.status]}</Selo>
+        </div>
         {Number(p.total) - lancado > 0.009 && (
           <JanelaBotao rotulo="Gerar parcelas" titulo="Gerar parcelas a receber" descricao={`Divide o que falta lançar (${brl(Number(p.total) - lancado)}) em entrada + parcelas mensais.`} variante="secundario" largura="xl">
             <form action={gerarParcelas.bind(null, id)} className="grid gap-3 md:grid-cols-12">
@@ -372,6 +549,21 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           </JanelaBotao>
         )}
       </div>
+      <Cartao className="mb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">Forma de pagamento combinada no fechamento</h3>
+            <p className="mt-1 whitespace-pre-line text-sm text-stone-700">{extra?.pagamento_combinado || <span className="text-amber-700">Ainda não registrada.</span>}</p>
+            {pagamento.vencido > 0 && <p className="mt-1 text-xs text-rosa">Vencido sem pagar: {brl(pagamento.vencido)}</p>}
+          </div>
+          <JanelaBotao rotulo={extra?.pagamento_combinado ? "Alterar" : "Registrar"} titulo="Forma de pagamento combinada" descricao="Como ficou acertado com o cliente quando a venda fechou." variante="secundario" icone={null} largura="md">
+            <form action={salvarPagamentoCombinado.bind(null, id)} className="grid gap-3">
+              <textarea name="pagamento_combinado" rows={4} defaultValue={extra?.pagamento_combinado ?? ""} placeholder="Ex.: entrada de 30% no Pix na assinatura, restante em 10x no cartão; ou 50% na assinatura e 50% na entrega" className={inputCls} />
+              <Botao type="submit" className="justify-self-end">Salvar</Botao>
+            </form>
+          </JanelaBotao>
+        </div>
+      </Cartao>
       <div className="mb-4">
         <Tabela cabecalho={["Descrição", "Vencimento", "Valor", "Situação", ""]} vazio={!parcelas?.length}>
           {parcelas?.map((l) => (
