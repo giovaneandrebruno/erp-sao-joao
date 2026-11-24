@@ -10,7 +10,8 @@ import { excluirCliente } from "../actions";
 import { SeletorSituacao } from "../situacao";
 import { BotaoExcluir } from "@/components/acoes";
 import { SeloStatus } from "../../producao/componentes";
-import { PastaDoCliente } from "./pasta";
+import { PastaDoCliente, type ProcessoDaPasta } from "./pasta";
+import { LINHA_PRINCIPAL, ehEtapa, statusPagamento } from "@/lib/processo";
 import { BUCKET_DOCUMENTOS } from "@/lib/documentos";
 
 export default async function ClientePage({ params }: PageProps<"/clientes/[id]">) {
@@ -29,6 +30,12 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
     supabase.from("cliente_briefing").select("respostas, preenchido_por_nome, alterado_por_nome, criado_em, atualizado_em").eq("cliente_id", id).maybeSingle(),
   ]);
   if (!cliente) notFound();
+  // processo do pedido para a pasta: etapa, forma de pagamento combinada e devoluções
+  const [{ data: pedidosProcesso }, { data: devolucoes }, { data: pessoas }] = await Promise.all([
+    supabase.from("pedidos").select("id, numero, etapa, pagamento_combinado").eq("cliente_id", id).neq("etapa", "cancelamento").order("numero", { ascending: false }),
+    supabase.from("cliente_pasta_devolucoes").select("id, motivo, responsavel_id, devolvida_por_nome, criado_em").eq("cliente_id", id).is("corrigida_em", null).order("criado_em"),
+    supabase.from("perfis").select("user_id, nome, email").in("papel", ["admin", "vendedor"]).order("nome"),
+  ]);
   // links para abrir os arquivos da pasta privada (valem 1 hora)
   const caminhos = (documentos ?? []).map((d) => d.caminho);
   const { data: links } = caminhos.length ? await supabase.storage.from(BUCKET_DOCUMENTOS).createSignedUrls(caminhos, 3600) : { data: [] };
@@ -48,6 +55,15 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
   const mapa = endereco ? linkMapa(endereco) : null;
   const whats = linkWhats(cliente.telefone);
   const anos = idade(cliente.data_nascimento);
+  const etapasAtivas = (pedidosProcesso ?? []).map((x) => x.etapa).filter(ehEtapa);
+  const processo: ProcessoDaPasta = {
+    // a pasta acompanha o pedido mais adiantado
+    etapa: etapasAtivas.sort((a, b) => LINHA_PRINCIPAL.indexOf(b === "assistencia" ? "concluido" : b) - LINHA_PRINCIPAL.indexOf(a === "assistencia" ? "concluido" : a))[0] ?? null,
+    pagamento: pedidosValidos.length ? statusPagamento(totalComprado, lancamentos ?? [], hoje).status : null,
+    pagamentoCombinado: (pedidosProcesso ?? []).map((x) => ({ pedidoId: x.id, numero: x.numero, texto: x.pagamento_combinado })),
+    devolucoes: (devolucoes ?? []).map((d) => ({ ...d, responsavel: pessoas?.find((x) => x.user_id === d.responsavel_id)?.nome ?? null })),
+    pessoas: pessoas ?? [],
+  };
 
   const grupos: { titulo: string; itens: [string, React.ReactNode, boolean?][] }[] = [
     {
@@ -139,7 +155,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
         </div>
       </Cartao>
 
-      <PastaDoCliente clienteId={id} nome={cliente.nome} fechado={situacao !== "lead" || pedidosValidos.length > 0} documentos={docsComLink} anotacoes={anotacoes ?? []} briefing={briefing} />
+      <PastaDoCliente clienteId={id} nome={cliente.nome} fechado={situacao !== "lead" || pedidosValidos.length > 0} documentos={docsComLink} anotacoes={anotacoes ?? []} briefing={briefing} processo={processo} />
 
       {!!negociacoes?.length && (
         <>

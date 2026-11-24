@@ -6,7 +6,7 @@ import { estiloBotao } from "@/components/ui";
 import { anexarFotosEntrega } from "../materiais-entrega";
 
 /** Reduz a foto para no máximo 1600 px antes de enviar. */
-async function comprimir(arquivo: File): Promise<Blob> {
+export async function comprimir(arquivo: File): Promise<Blob> {
   if (!arquivo.type.startsWith("image/")) return arquivo;
   const bmp = await createImageBitmap(arquivo).catch(() => null);
   if (!bmp) return arquivo;

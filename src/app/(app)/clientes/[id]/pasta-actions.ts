@@ -96,3 +96,31 @@ export async function salvarBriefing(clienteId: string, form: FormData) {
   if (error) throw new Error(error.message);
   atualizar(clienteId);
 }
+
+/* ─────────────────────── pasta devolvida para correção ─────────────────────── */
+
+/** Devolve a pasta para quem precisa corrigir, com o motivo. Enquanto não for corrigida, o pedido não avança de etapa. */
+export async function devolverPasta(clienteId: string, form: FormData) {
+  const motivo = texto(form, "motivo");
+  if (!motivo) throw new Error("Escreva o motivo.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("cliente_pasta_devolucoes").insert({ cliente_id: clienteId, motivo, responsavel_id: texto(form, "responsavel_id") });
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/");
+  revalidatePath("/prazos");
+}
+
+export async function marcarPastaCorrigida(id: string, clienteId: string) {
+  const supabase = await createClient();
+  const { data: quem } = await supabase.rpc("nome_do_usuario_atual");
+  const { error } = await supabase
+    .from("cliente_pasta_devolucoes")
+    .update({ corrigida_em: new Date().toISOString(), corrigida_por_nome: (quem as string | null) ?? null })
+    .eq("id", id)
+    .eq("cliente_id", clienteId);
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/");
+  revalidatePath("/prazos");
+}

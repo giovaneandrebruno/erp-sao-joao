@@ -5,7 +5,12 @@ export const TIPOS_DOCUMENTO = {
   eletrodomesticos: "Eletrodomésticos (manuais e medidas)",
   referencia: "Referência do cliente (fotos, inspiração)",
   briefing: "Briefing / ficha do cliente",
-  contrato: "Contrato",
+  contrato: "Contrato de venda (assinado)",
+  isencao_eletros: "Isenção das medidas dos eletros (assinada)",
+  executivo_assinado: "Projeto executivo (assinado)",
+  liberacao_entrega: "Liberação de entrega (assinada)",
+  termo_entrega: "Termo de entrega (assinado)",
+  termo_vistoria: "Termo de vistoria / montagem finalizada (assinado)",
   projeto: "Projeto / planta / render",
   medidas: "Medidas da obra",
   comprovante: "Comprovante de pagamento",
@@ -14,7 +19,7 @@ export const TIPOS_DOCUMENTO = {
 } as const;
 export type TipoDocumento = keyof typeof TIPOS_DOCUMENTO;
 
-/** Documentos que todo cliente fechado deveria ter na pasta. */
+/** Documentos que todo cliente fechado deveria ter na pasta (a lista completa, por etapa, está em lib/processo.ts). */
 export const DOCUMENTOS_ESSENCIAIS: TipoDocumento[] = ["pedido_fechado", "memorial_descritivo", "contrato"];
 
 export const BUCKET_DOCUMENTOS = "documentos";
