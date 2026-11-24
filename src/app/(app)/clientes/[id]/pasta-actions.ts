@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { texto } from "@/lib/format";
+import { hojeISO, texto } from "@/lib/format";
+import { SITUACOES, ehSituacaoAtendimento, type SituacaoAtendimento } from "@/lib/processo";
 import { BUCKET_DOCUMENTOS, ehTipoDocumento, pastaDoCliente } from "@/lib/documentos";
 import { CAMPOS_BRIEFING } from "@/lib/briefing";
 
@@ -95,4 +96,57 @@ export async function salvarBriefing(clienteId: string, form: FormData) {
   const { error } = await supabase.from("cliente_briefing").upsert({ cliente_id: clienteId, respostas }, { onConflict: "cliente_id" });
   if (error) throw new Error(error.message);
   atualizar(clienteId);
+}
+
+/* ─────────────────────── pasta devolvida para correção ─────────────────────── */
+
+/** Devolve a pasta para quem precisa corrigir, com o motivo. Enquanto não for corrigida, o pedido não avança de etapa. */
+export async function devolverPasta(clienteId: string, form: FormData) {
+  const motivo = texto(form, "motivo");
+  if (!motivo) throw new Error("Escreva o motivo.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("cliente_pasta_devolucoes").insert({ cliente_id: clienteId, motivo, responsavel_id: texto(form, "responsavel_id") });
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/");
+  revalidatePath("/prazos");
+}
+
+export async function marcarPastaCorrigida(id: string, clienteId: string) {
+  const supabase = await createClient();
+  const { data: quem } = await supabase.rpc("nome_do_usuario_atual");
+  const { error } = await supabase
+    .from("cliente_pasta_devolucoes")
+    .update({ corrigida_em: new Date().toISOString(), corrigida_por_nome: (quem as string | null) ?? null })
+    .eq("id", id)
+    .eq("cliente_id", clienteId);
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/");
+  revalidatePath("/prazos");
+}
+
+/* ─────────────────────── cliente novo: situação do atendimento ─────────────────────── */
+
+/** Situação do atendimento do cliente novo, com responsável e prazo (vazio = prazo sugerido da situação). */
+export async function salvarAtendimento(clienteId: string, form: FormData) {
+  const situacao = texto(form, "atendimento_situacao");
+  if (situacao && !ehSituacaoAtendimento(situacao)) throw new Error("Situação inválida.");
+  const supabase = await createClient();
+  const { data: c } = await supabase.from("clientes").select("atendimento_situacao").eq("id", clienteId).maybeSingle();
+  const mudou = (c?.atendimento_situacao ?? null) !== (situacao ?? null);
+  const sugestao = situacao ? SITUACOES[situacao as SituacaoAtendimento].prazoDias : null;
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      atendimento_situacao: situacao,
+      atendimento_responsavel_id: texto(form, "atendimento_responsavel_id"),
+      atendimento_prazo: texto(form, "atendimento_prazo") ?? (situacao && sugestao !== null ? hojeISO(sugestao) : null),
+      ...(mudou ? { atendimento_desde: situacao ? new Date().toISOString() : null } : {}),
+    })
+    .eq("id", clienteId);
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/prazos");
+  revalidatePath("/");
 }
