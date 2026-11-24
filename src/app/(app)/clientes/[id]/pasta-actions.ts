@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { texto } from "@/lib/format";
+import { hojeISO, texto } from "@/lib/format";
+import { SITUACOES, ehSituacaoAtendimento, type SituacaoAtendimento } from "@/lib/processo";
 import { BUCKET_DOCUMENTOS, ehTipoDocumento, pastaDoCliente } from "@/lib/documentos";
 import { CAMPOS_BRIEFING } from "@/lib/briefing";
 
@@ -123,4 +124,29 @@ export async function marcarPastaCorrigida(id: string, clienteId: string) {
   atualizar(clienteId);
   revalidatePath("/");
   revalidatePath("/prazos");
+}
+
+/* ─────────────────────── cliente novo: situação do atendimento ─────────────────────── */
+
+/** Situação do atendimento do cliente novo, com responsável e prazo (vazio = prazo sugerido da situação). */
+export async function salvarAtendimento(clienteId: string, form: FormData) {
+  const situacao = texto(form, "atendimento_situacao");
+  if (situacao && !ehSituacaoAtendimento(situacao)) throw new Error("Situação inválida.");
+  const supabase = await createClient();
+  const { data: c } = await supabase.from("clientes").select("atendimento_situacao").eq("id", clienteId).maybeSingle();
+  const mudou = (c?.atendimento_situacao ?? null) !== (situacao ?? null);
+  const sugestao = situacao ? SITUACOES[situacao as SituacaoAtendimento].prazoDias : null;
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      atendimento_situacao: situacao,
+      atendimento_responsavel_id: texto(form, "atendimento_responsavel_id"),
+      atendimento_prazo: texto(form, "atendimento_prazo") ?? (situacao && sugestao !== null ? hojeISO(sugestao) : null),
+      ...(mudou ? { atendimento_desde: situacao ? new Date().toISOString() : null } : {}),
+    })
+    .eq("id", clienteId);
+  if (error) throw new Error(error.message);
+  atualizar(clienteId);
+  revalidatePath("/prazos");
+  revalidatePath("/");
 }

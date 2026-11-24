@@ -2,14 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { hojeISO, texto } from "@/lib/format";
-import { perfilAtual } from "@/lib/perfil";
-import {
-  CHECKLISTS, SITUACOES, ehChecklist, ehEtapa, ehSituacao, ehTipoOcorrencia, pendenciasParaAvancar,
-  type Etapa, type MarcasChecklists,
-} from "@/lib/processo";
-
-export type RespostaEtapa = { erro?: string; pendencias?: string[]; ok?: boolean } | null;
+import { texto } from "@/lib/format";
+import { CHECKLISTS, MOTIVOS_CANCELAMENTO, ehChecklist, ehTipoOcorrencia, type MarcasChecklists } from "@/lib/processo";
+import { definirStatus } from "../producao/actions";
 
 const atualizar = (pedidoId: string) => {
   revalidatePath(`/pedidos/${pedidoId}`);
@@ -18,70 +13,26 @@ const atualizar = (pedidoId: string) => {
   revalidatePath("/");
 };
 
-/** Muda a etapa e/ou a situação do pedido. Para avançar, confere a pasta, a forma de pagamento e os checklists. */
-export async function mudarEtapa(pedidoId: string, _antes: RespostaEtapa, form: FormData): Promise<RespostaEtapa> {
-  const destino = texto(form, "etapa");
-  if (!ehEtapa(destino)) return { erro: "Escolha a etapa." };
-  const situacao = texto(form, "situacao");
-  if (situacao && (!ehSituacao(situacao) || SITUACOES[situacao].etapa !== destino)) return { erro: "A situação escolhida não é desta etapa." };
-  const motivo = texto(form, "cancelamento_motivo");
-  if (destino === "cancelamento" && !situacao) return { erro: "Para cancelar, escolha o motivo (comprou em outra loja ou outro motivo)." };
-
+/** Muda a etapa SCRUM de uma OS do pedido (a mesma do quadro da Produção). */
+export async function mudarEtapaScrum(pedidoId: string, ordemId: string, form: FormData) {
   const supabase = await createClient();
-  const { data: p, error: e1 } = await supabase
-    .from("pedidos")
-    .select("cliente_id, etapa, situacao, status, checklists, pagamento_combinado, situacao_prazo, situacao_responsavel_id")
-    .eq("id", pedidoId)
-    .single();
-  if (e1 || !p) return { erro: "Pedido não encontrado." };
-
-  const etapaAtual = (ehEtapa(p.etapa) ? p.etapa : "venda") as Etapa;
-  const [{ data: docs }, { count: devolvidas }] = await Promise.all([
-    supabase.from("cliente_documentos").select("tipo").eq("cliente_id", p.cliente_id),
-    supabase.from("cliente_pasta_devolucoes").select("id", { count: "exact", head: true }).eq("cliente_id", p.cliente_id).is("corrigida_em", null),
-  ]);
-  const pendencias = pendenciasParaAvancar({
-    etapaAtual, destino,
-    documentos: new Set((docs ?? []).map((d) => d.tipo)),
-    checklists: p.checklists as MarcasChecklists,
-    pagamentoCombinado: p.pagamento_combinado,
-    pastaDevolvida: (devolvidas ?? 0) > 0,
-  });
-  const passarMesmoAssim = form.get("passar_mesmo_assim") !== null && (await perfilAtual())?.papel === "admin";
-  if (pendencias.length && !passarMesmoAssim) return { erro: "Ainda não dá para passar para esta etapa:", pendencias };
-
-  const mudouEtapa = destino !== etapaAtual;
-  const mudouSituacao = (situacao ?? null) !== (p.situacao ?? null);
-  // prazo: o que a pessoa digitou ou, se a situação mudou, a sugestão da situação
-  const sugestao = situacao && ehSituacao(situacao) ? (SITUACOES[situacao] as { prazoDias: number | null }).prazoDias : null;
-  const prazo = texto(form, "situacao_prazo") ?? (mudouSituacao || mudouEtapa ? (sugestao !== null ? hojeISO(sugestao) : null) : p.situacao_prazo);
-
-  const dados: Record<string, unknown> = {
-    etapa: destino,
-    situacao: situacao ?? null,
-    situacao_prazo: prazo,
-    situacao_responsavel_id: texto(form, "situacao_responsavel_id"),
-  };
-  if (mudouEtapa || mudouSituacao) dados.situacao_desde = new Date().toISOString();
-  if (destino === "cancelamento") {
-    dados.cancelamento_motivo = motivo;
-    dados.status = "cancelado";
-  } else if (destino === "concluido" && p.status !== "entregue" && p.status !== "cancelado") {
-    dados.status = "entregue";
-  } else if (destino === "fabricacao" && p.status === "aberto") {
-    dados.status = "em_producao";
-  } else if (p.status === "cancelado" && etapaAtual === "cancelamento") {
-    dados.status = "aberto"; // pedido reaberto
-  }
-
-  const { error } = await supabase.from("pedidos").update(dados).eq("id", pedidoId);
-  if (error) return { erro: `Não foi possível salvar: ${error.message}` };
-  if (mudouEtapa || mudouSituacao) {
-    const obs = [pendencias.length ? `Passou com pendências: ${pendencias.join("; ")}` : null, destino === "cancelamento" ? motivo : null].filter(Boolean).join(" · ");
-    await supabase.from("pedido_etapas_historico").insert({ pedido_id: pedidoId, etapa: destino, situacao: situacao ?? null, observacao: obs || null });
-  }
+  const { data: op } = await supabase.from("ordens_producao").select("id").eq("id", ordemId).eq("pedido_id", pedidoId).maybeSingle();
+  if (!op) throw new Error("Ordem de serviço não encontrada neste pedido.");
+  const r = await definirStatus(ordemId, texto(form, "status_pcp") ?? "");
+  if (!r.ok) throw new Error(r.erro);
   atualizar(pedidoId);
-  return { ok: true };
+}
+
+/** Motivo do cancelamento: comprou em outra loja ou outro motivo, com o detalhe. */
+export async function salvarMotivoCancelamento(pedidoId: string, form: FormData) {
+  const chave = texto(form, "motivo");
+  const motivo = chave && Object.hasOwn(MOTIVOS_CANCELAMENTO, chave) ? MOTIVOS_CANCELAMENTO[chave as keyof typeof MOTIVOS_CANCELAMENTO] : null;
+  if (!motivo) throw new Error("Escolha o motivo.");
+  const detalhe = texto(form, "detalhe");
+  const supabase = await createClient();
+  const { error } = await supabase.from("pedidos").update({ cancelamento_motivo: detalhe ? `${motivo}: ${detalhe}` : motivo }).eq("id", pedidoId);
+  if (error) throw new Error(error.message);
+  atualizar(pedidoId);
 }
 
 /** Marca os itens de um dos 3 checklists. */
@@ -187,4 +138,3 @@ export async function excluirOcorrencia(pedidoId: string, id: string): Promise<s
   revalidatePath(`/pedidos/${pedidoId}`);
   return null;
 }
-

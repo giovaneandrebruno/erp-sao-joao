@@ -11,7 +11,7 @@ import { SeletorSituacao } from "../situacao";
 import { BotaoExcluir } from "@/components/acoes";
 import { SeloStatus } from "../../producao/componentes";
 import { PastaDoCliente, type ProcessoDaPasta } from "./pasta";
-import { LINHA_PRINCIPAL, ehEtapa, statusPagamento } from "@/lib/processo";
+import { LINHA_PRINCIPAL, etapaDoPedido, statusPagamento } from "@/lib/processo";
 import { BUCKET_DOCUMENTOS } from "@/lib/documentos";
 
 export default async function ClientePage({ params }: PageProps<"/clientes/[id]">) {
@@ -21,7 +21,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
     supabase.from("clientes").select("*").eq("id", id).maybeSingle(),
     supabase.from("orcamentos_resumo").select("id, numero, status, total, criado_em").eq("cliente_id", id).order("numero", { ascending: false }),
     supabase.from("pedidos_resumo").select("id, numero, status, total, data_entrega_prevista, criado_em").eq("cliente_id", id).order("numero", { ascending: false }),
-    supabase.from("ordens_producao").select("id, os, cliente_nome, status_pcp, posicao, entrega_limite").eq("cliente_id", id).order("ordem"),
+    supabase.from("ordens_producao").select("id, os, cliente_nome, status_pcp, posicao, entrega_limite, pedido_id").eq("cliente_id", id).order("ordem"),
     supabase.from("negociacoes").select("id, titulo, etapa, valor_estimado, proxima_acao, proxima_acao_data").eq("cliente_id", id).order("criado_em", { ascending: false }),
     supabase.from("lancamentos").select("id, descricao, valor, vencimento, pago_em, pedido_id").eq("cliente_id", id).eq("tipo", "receber").order("vencimento"),
     supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
@@ -32,7 +32,7 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
   if (!cliente) notFound();
   // processo do pedido para a pasta: etapa, forma de pagamento combinada e devoluções
   const [{ data: pedidosProcesso }, { data: devolucoes }, { data: pessoas }] = await Promise.all([
-    supabase.from("pedidos").select("id, numero, etapa, pagamento_combinado").eq("cliente_id", id).neq("etapa", "cancelamento").order("numero", { ascending: false }),
+    supabase.from("pedidos").select("id, numero, pagamento_combinado").eq("cliente_id", id).neq("status", "cancelado").order("numero", { ascending: false }),
     supabase.from("cliente_pasta_devolucoes").select("id, motivo, responsavel_id, devolvida_por_nome, criado_em").eq("cliente_id", id).is("corrigida_em", null).order("criado_em"),
     supabase.from("perfis").select("user_id, nome, email").in("papel", ["admin", "vendedor"]).order("nome"),
   ]);
@@ -55,14 +55,17 @@ export default async function ClientePage({ params }: PageProps<"/clientes/[id]"
   const mapa = endereco ? linkMapa(endereco) : null;
   const whats = linkWhats(cliente.telefone);
   const anos = idade(cliente.data_nascimento);
-  const etapasAtivas = (pedidosProcesso ?? []).map((x) => x.etapa).filter(ehEtapa);
+  // etapa de cada pedido a partir das suas OS (SCRUM); a pasta acompanha o pedido mais adiantado
+  const ordensAtivas = (ordens ?? []) as { status_pcp: string; pedido_id?: string | null }[];
+  const etapasAtivas = (pedidosProcesso ?? []).map((x) => etapaDoPedido(ordensAtivas.filter((o) => o.pedido_id === x.id).map((o) => o.status_pcp)));
   const processo: ProcessoDaPasta = {
     // a pasta acompanha o pedido mais adiantado
-    etapa: etapasAtivas.sort((a, b) => LINHA_PRINCIPAL.indexOf(b === "assistencia" ? "concluido" : b) - LINHA_PRINCIPAL.indexOf(a === "assistencia" ? "concluido" : a))[0] ?? null,
+    etapa: etapasAtivas.sort((a, b) => LINHA_PRINCIPAL.indexOf(b) - LINHA_PRINCIPAL.indexOf(a))[0] ?? null,
     pagamento: pedidosValidos.length ? statusPagamento(totalComprado, lancamentos ?? [], hoje).status : null,
     pagamentoCombinado: (pedidosProcesso ?? []).map((x) => ({ pedidoId: x.id, numero: x.numero, texto: x.pagamento_combinado })),
     devolucoes: (devolucoes ?? []).map((d) => ({ ...d, responsavel: pessoas?.find((x) => x.user_id === d.responsavel_id)?.nome ?? null })),
     pessoas: pessoas ?? [],
+    atendimento: { situacao: cliente.atendimento_situacao ?? null, responsavelId: cliente.atendimento_responsavel_id ?? null, prazo: cliente.atendimento_prazo ?? null, desde: cliente.atendimento_desde ?? null },
   };
 
   const grupos: { titulo: string; itens: [string, React.ReactNode, boolean?][] }[] = [

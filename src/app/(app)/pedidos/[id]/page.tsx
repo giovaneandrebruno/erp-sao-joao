@@ -13,12 +13,12 @@ import { BotaoExcluir } from "@/components/acoes";
 import { adicionarMaterial, removerMaterial, salvarEntrega, salvarSatisfacao } from "../materiais-entrega";
 import { ImportarMateriais } from "./importar-materiais";
 import { FotosEntrega } from "./fotos-entrega";
-import { FormEtapa } from "./etapa-form";
 import { FormOcorrencia } from "./ocorrencia-form";
-import { abrirAssistenciaDaOcorrencia, excluirOcorrencia, resolverOcorrencia, salvarChecklist, salvarDatasLimite, salvarPagamentoCombinado } from "../processo-actions";
+import { abrirAssistenciaDaOcorrencia, excluirOcorrencia, mudarEtapaScrum, resolverOcorrencia, salvarChecklist, salvarDatasLimite, salvarMotivoCancelamento, salvarPagamentoCombinado } from "../processo-actions";
+import { STATUS_PCP } from "@/lib/pcp";
 import {
-  CHECKLISTS, COR_PAGAMENTO, ETAPAS, LINHA_PRINCIPAL, ORDEM_ETAPAS, ROTULO_PAGAMENTO, SITUACOES, TIPOS_OCORRENCIA,
-  ehEtapa, ehSituacao, nomeEtapa, nomeSituacao, pendenciasParaAvancar, progressoChecklist, statusPagamento,
+  CHECKLISTS, COR_PAGAMENTO, LINHA_PRINCIPAL, MOTIVOS_CANCELAMENTO, ROTULO_PAGAMENTO, TIPOS_OCORRENCIA,
+  checklistDaEtapa, etapaDoPedido, pendenciasParaAvancar, progressoChecklist, statusPagamento,
   type ChaveChecklist, type Etapa, type MarcasChecklists, type TipoOcorrencia,
 } from "@/lib/processo";
 
@@ -39,13 +39,9 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
   const [{ data: materiais }, { data: catalogo }, { data: extra }] = await Promise.all([
     supabase.from("pedido_materiais").select("id, produto_id, quantidade, observacoes, baixado, produto:produto_id(nome, codigo, unidade_medida)").eq("pedido_id", id).order("criado_em"),
     supabase.from("produtos").select("id, codigo, nome, unidade_medida").eq("ativo", true).neq("tipo", "servico").order("nome"),
-    supabase.from("pedidos").select("checklist_entrega, entrega_fotos, entrega_recebido_por, entrega_observacoes, satisfacao_nota, satisfacao_comentario, satisfacao_em, etapa, situacao, situacao_responsavel_id, situacao_prazo, situacao_desde, checklists, data_limite_assinatura, data_limite_entrega, pagamento_combinado, cancelamento_motivo").eq("id", id).maybeSingle(),
+    supabase.from("pedidos").select("checklist_entrega, entrega_fotos, entrega_recebido_por, entrega_observacoes, satisfacao_nota, satisfacao_comentario, satisfacao_em, checklists, data_limite_assinatura, data_limite_entrega, pagamento_combinado, cancelamento_motivo").eq("id", id).maybeSingle(),
   ]);
-  const [{ data: historico }, { data: ocorrencias }, { data: pessoas }] = await Promise.all([
-    supabase.from("pedido_etapas_historico").select("id, etapa, situacao, observacao, feito_por_nome, criado_em").eq("pedido_id", id).order("criado_em", { ascending: false }).limit(8),
-    supabase.from("pedido_ocorrencias").select("id, tipo, ambiente, descricao, fotos, chamado_id, resolvida_em, criado_por_nome, criado_em").eq("pedido_id", id).order("criado_em", { ascending: false }),
-    supabase.from("perfis").select("user_id, nome, email").in("papel", ["admin", "vendedor"]).order("nome"),
-  ]);
+  const { data: ocorrencias } = await supabase.from("pedido_ocorrencias").select("id, tipo, ambiente, descricao, fotos, chamado_id, resolvida_em, criado_por_nome, criado_em").eq("pedido_id", id).order("criado_em", { ascending: false });
   const idsMateriais = [...new Set((materiais ?? []).map((m) => m.produto_id))];
   const { data: saldos } = idsMateriais.length
     ? await supabase.from("produtos_saldo").select("id, estoque_atual, reservado, livre").in("id", idsMateriais)
@@ -71,20 +67,19 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
   const fotosOcorrencias = (ocorrencias ?? []).flatMap((o) => o.fotos ?? []);
   const { data: urlsOcorr } = fotosOcorrencias.length ? await supabase.storage.from("fotos").createSignedUrls(fotosOcorrencias, 3600) : { data: [] };
   const urlOcorr = new Map((urlsOcorr ?? []).map((u) => [u.path, u.signedUrl]));
-  // processo: etapa, o que falta para a próxima, pasta e pagamento
-  const etapa = (ehEtapa(extra?.etapa) ? extra.etapa : "venda") as Etapa;
+  // processo: a etapa SCRUM das OS do pedido (quadro da Produção), o que falta, pasta e pagamento
+  const etapa: Etapa = etapaDoPedido((ordens ?? []).map((o) => o.status_pcp));
   const marcasChecklists = (extra?.checklists ?? {}) as MarcasChecklists;
   const [{ data: docsCliente }, { data: devolucoes }] = await Promise.all([
     supabase.from("cliente_documentos").select("tipo").eq("cliente_id", p.cliente_id),
     supabase.from("cliente_pasta_devolucoes").select("id, motivo, devolvida_por_nome, criado_em").eq("cliente_id", p.cliente_id).is("corrigida_em", null),
   ]);
   const proxima = LINHA_PRINCIPAL[LINHA_PRINCIPAL.indexOf(etapa) + 1] as Etapa | undefined;
-  const faltaParaProxima = proxima
-    ? pendenciasParaAvancar({ etapaAtual: etapa, destino: proxima, documentos: new Set((docsCliente ?? []).map((d) => d.tipo)), checklists: marcasChecklists, pagamentoCombinado: extra?.pagamento_combinado, pastaDevolvida: (devolucoes?.length ?? 0) > 0 })
+  // tudo o que já devia estar pronto até sair da fase atual (pasta, pagamento combinado e checklists)
+  const pendencias = proxima && p.status !== "cancelado"
+    ? pendenciasParaAvancar({ etapaAtual: "pre_venda", destino: proxima, documentos: new Set((docsCliente ?? []).map((d) => d.tipo)), checklists: marcasChecklists, pagamentoCombinado: extra?.pagamento_combinado, pastaDevolvida: (devolucoes?.length ?? 0) > 0 })
     : [];
-  const pessoaDe = (uid: string | null | undefined) => { const x = pessoas?.find((q) => q.user_id === uid); return x ? x.nome || x.email : null; };
-  const situacaoAtual = ehSituacao(extra?.situacao) ? SITUACOES[extra.situacao] : null;
-  const prazoVencido = Boolean(extra?.situacao_prazo && extra.situacao_prazo < hoje && etapa !== "concluido" && etapa !== "cancelamento");
+  const checklistDaVez = checklistDaEtapa(etapa);
   const pagamento = statusPagamento(Number(p.total), parcelas ?? [], hoje);
   const diasAte = (d: string | null | undefined) => (d ? Math.round((Date.parse(`${d}T12:00:00`) - Date.parse(`${hoje}T12:00:00`)) / 864e5) : null);
   const avisoData = (d: string | null | undefined, feito: boolean) => {
@@ -94,7 +89,7 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
     if (n <= 7) return <Selo cor="amber">{n === 0 ? "vence hoje" : `vence em ${n} dia(s)`}</Selo>;
     return null;
   };
-  const passouDe = (e: Etapa) => LINHA_PRINCIPAL.indexOf(etapa) > LINHA_PRINCIPAL.indexOf(e) || etapa === "assistencia";
+  const passouDe = (e: Etapa) => LINHA_PRINCIPAL.indexOf(etapa) > LINHA_PRINCIPAL.indexOf(e) || p.status === "entregue" || p.status === "cancelado";
   const primeiroNome = p.cliente_nome?.split(" ")[0];
   const zap = (modelo: string | null | undefined, extra: Record<string, string>) =>
     linkWhats(cli?.telefone, preencher(modelo ?? "", { cliente: primeiroNome, empresa: cfg?.nome_fantasia, ...extra }));
@@ -136,48 +131,63 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
         </form>
       </Cartao>
 
+      {p.status === "cancelado" && (
+        <Cartao className="mb-8">
+          <h3 className="mb-1 font-semibold">Motivo do cancelamento</h3>
+          {extra?.cancelamento_motivo && <p className="mb-3 text-sm text-stone-700">{extra.cancelamento_motivo}</p>}
+          <form action={salvarMotivoCancelamento.bind(null, id)} className="flex flex-wrap items-end gap-4">
+            <Campo rotulo="Motivo *">
+              <select name="motivo" required defaultValue="" className={inputCls}>
+                <option value="" disabled>Escolha</option>
+                {Object.entries(MOTIVOS_CANCELAMENTO).map(([k, r]) => <option key={k} value={k}>{r}</option>)}
+              </select>
+            </Campo>
+            <Campo rotulo="Detalhe" className="min-w-72 flex-1">
+              <input name="detalhe" placeholder="O que o cliente disse, onde comprou, valor..." className={inputCls} />
+            </Campo>
+            <Botao type="submit" variante="secundario">Salvar motivo</Botao>
+          </form>
+        </Cartao>
+      )}
+
       <Cartao className="mb-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold">Processo do pedido</h3>
-            <p className="text-xs text-stone-500">
-              Etapa {ORDEM_ETAPAS.indexOf(etapa) + 1} de 11: <strong>{nomeEtapa(etapa)}</strong>
-              {situacaoAtual && <> · {situacaoAtual.nome}</>}
-              {extra?.situacao_responsavel_id && <> · com {pessoaDe(extra.situacao_responsavel_id)}</>}
-              {extra?.situacao_prazo && <> · prazo {data(extra.situacao_prazo)}</>}
-              {extra?.situacao_desde && <> · desde {data(extra.situacao_desde)}</>}
-            </p>
+            <h3 className="font-semibold">Processo do pedido (SCRUM)</h3>
+            <p className="text-xs text-stone-500">A mesma etapa do <Link href="/producao" className="text-madeira-700 hover:underline">quadro da Produção</Link>. Mudando aqui, muda lá, e o contrário também.</p>
           </div>
-          {prazoVencido && <Selo cor="red">prazo da situação vencido</Selo>}
-          {etapa === "cancelamento" && <Selo cor="red">cancelado{nomeSituacao(extra?.situacao) ? `: ${nomeSituacao(extra?.situacao)}` : ""}</Selo>}
         </div>
-        <ol className="mb-4 flex flex-wrap gap-1.5 text-xs">
-          {LINHA_PRINCIPAL.map((e, i) => (
-            <li key={e}>
-              <Selo cor={e === etapa ? "blue" : passouDe(e) ? "green" : "stone"}>{i + 1}. {ETAPAS[e].nome}</Selo>
-            </li>
-          ))}
-          {(etapa === "assistencia" || etapa === "cancelamento") && <li><Selo cor={etapa === "cancelamento" ? "red" : "amber"}>{nomeEtapa(etapa)}</Selo></li>}
-        </ol>
+        {(ordens?.length ?? 0) > 0 ? (
+          <div className="grid gap-2">
+            {ordens!.map((o) => (
+              <form key={o.id} action={mudarEtapaScrum.bind(null, id, o.id)} className="flex flex-wrap items-center gap-3 text-sm">
+                <Link href={`/producao/${o.id}`} className="w-44 truncate font-medium text-madeira-800 hover:underline">{o.os ? `OS ${o.os}` : `#${o.numero}`} · {o.descricao}</Link>
+                <SeloStatus sigla={o.status_pcp} nome />
+                <select name="status_pcp" defaultValue={o.status_pcp} className={`${inputCls} w-auto py-1`}>
+                  {STATUS_PCP.map((x) => <option key={x.sigla} value={x.sigla}>{x.sigla} · {x.nome}</option>)}
+                </select>
+                <Botao type="submit" variante="secundario" className="!px-3 !py-1.5">Mudar etapa</Botao>
+              </form>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-stone-500">Este pedido ainda não tem ordem de serviço. Crie em <strong>Nova ordem de produção</strong>, mais abaixo, para ele entrar no quadro.</p>
+        )}
         {(devolucoes?.length ?? 0) > 0 && (
-          <p className="mb-3 rounded-xl bg-rosa/10 p-3 text-sm text-rosa ring-1 ring-inset ring-rosa/30">
+          <p className="mt-4 rounded-xl bg-rosa/10 p-3 text-sm text-rosa ring-1 ring-inset ring-rosa/30">
             Pasta devolvida para correção: {devolucoes!.map((d) => d.motivo.replace(/[.\s]+$/, "")).join(" · ")}. <Link href={`/clientes/${p.cliente_id}`} className="font-semibold underline">Abrir a pasta</Link>
           </p>
         )}
-        <FormEtapa
-          pedidoId={id} etapa={etapa} situacao={extra?.situacao ?? null} responsavelId={extra?.situacao_responsavel_id ?? null}
-          prazo={extra?.situacao_prazo ?? null} motivo={extra?.cancelamento_motivo ?? null} pessoas={pessoas ?? []} admin={ehAdmin}
-        />
-        {proxima && (
+        {p.status !== "cancelado" && (
           <div className="mt-4 text-sm">
-            {faltaParaProxima.length ? (
+            {pendencias.length ? (
               <>
-                <p className="font-medium text-stone-700">Para passar para {nomeEtapa(proxima)}, falta:</p>
-                <ul className="mt-1 list-disc pl-5 text-stone-600">{faltaParaProxima.map((x) => <li key={x}>{x}</li>)}</ul>
+                <p className="font-medium text-stone-700">O que falta até a próxima fase:</p>
+                <ul className="mt-1 list-disc pl-5 text-stone-600">{pendencias.map((x) => <li key={x}>{x}</li>)}</ul>
               </>
-            ) : (
-              <p className="text-neon">Tudo pronto para passar para {nomeEtapa(proxima)}.</p>
-            )}
+            ) : proxima ? (
+              <p className="text-neon">Pasta, pagamento combinado e checklists em dia para esta fase.</p>
+            ) : null}
           </div>
         )}
         <form action={salvarDatasLimite.bind(null, id)} className="mt-5 flex flex-wrap items-end gap-4 border-t border-stone-100 pt-4">
@@ -195,19 +205,6 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           </Campo>
           <Botao type="submit" variante="secundario">Salvar datas</Botao>
         </form>
-        {(historico?.length ?? 0) > 0 && (
-          <div className="mt-5 border-t border-stone-100 pt-4">
-            <h4 className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500">Histórico das etapas</h4>
-            <ul className="grid gap-1 text-xs text-stone-600">
-              {historico!.map((h) => (
-                <li key={h.id}>
-                  {dataHora(h.criado_em)} · <strong>{nomeEtapa(h.etapa)}</strong>{nomeSituacao(h.situacao) ? ` · ${nomeSituacao(h.situacao)}` : ""}
-                  {h.feito_por_nome ? `, por ${h.feito_por_nome}` : ""}{h.observacao ? ` · ${h.observacao}` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </Cartao>
 
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
@@ -268,7 +265,7 @@ export default async function PedidoPage({ params }: PageProps<"/pedidos/[id]">)
           return (
             <Cartao key={c}>
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h3 className="font-semibold">{CHECKLISTS[c].nome}</h3>
+                <h3 className="font-semibold">{CHECKLISTS[c].nome}{c === checklistDaVez && <span className="ml-2 text-xs font-medium text-laranja">fase atual</span>}</h3>
                 <Selo cor={prog.completo ? "green" : prog.feitos ? "amber" : "stone"}>{prog.feitos} de {prog.total}</Selo>
               </div>
               <p className="mb-3 text-xs text-stone-500">{CHECKLISTS[c].periodo}{c === "finalizacao_obra" ? ` · ${fotosEntrega.length} foto(s) da entrega` : ""}</p>

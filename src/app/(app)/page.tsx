@@ -233,7 +233,7 @@ export default async function PainelPage() {
 
       {avisosPedidos.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Pedidos para dar atenção</h2>
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-violeta">Pedidos e clientes para dar atenção</h2>
           <Cartao className="filete">
             <ul className={lista}>
               {avisosPedidos.map((a) => (

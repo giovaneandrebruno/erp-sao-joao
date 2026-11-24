@@ -223,3 +223,45 @@ export const TIPOS_ASSISTENCIA = { garantia: "Garantia de fábrica", mau_uso: "M
 export const DEPENDE_DE = { loja: "Depende só da loja", fabrica: "Depende da fábrica" } as const;
 /** Garantia de fábrica: 1 ano. */
 export const DIAS_GARANTIA = 365;
+
+/* ───────────────────────── SCRUM (quadro da Produção) ───────────────────────── */
+
+/**
+ * O pedido fechado segue a etapa SCRUM da ordem de serviço (quadro da Produção).
+ * Aqui cada sigla vira a etapa do processo, para saber o que a pasta e os checklists já deviam ter.
+ */
+export function etapaDoStatusPcp(sigla: string | null | undefined): Etapa {
+  switch (sigla) {
+    case "OC": case "MF": return "medicao";
+    case "AP": case "DET": return "executivo";
+    case "PC": case "CO": case "PM": return "fabricacao";
+    case "EM": return "montagem";
+    case "CL": case "IP": return "pos_montagem";
+    case "FIN": return "concluido";
+    default: return "venda"; // VR, MD, PP e pedido sem OS
+  }
+}
+
+/** Etapa do pedido a partir das suas OS: a mais atrasada manda (o pedido só anda quando todas andam). */
+export function etapaDoPedido(siglas: (string | null | undefined)[]): Etapa {
+  if (!siglas.length) return "venda";
+  return siglas.map(etapaDoStatusPcp).sort((a, b) => LINHA_PRINCIPAL.indexOf(a) - LINHA_PRINCIPAL.indexOf(b))[0];
+}
+
+/** Checklist que acompanha cada fase do SCRUM. */
+export function checklistDaEtapa(e: Etapa): ChaveChecklist | null {
+  if (e === "venda" || e === "medicao") return "venda_realizada";
+  if (e === "executivo" || e === "fabricacao") return "executivo_implantado";
+  if (e === "entrega" || e === "montagem" || e === "pos_montagem") return "finalizacao_obra";
+  return null;
+}
+
+/* ───────────────────────── cliente novo (atendimento) ───────────────────────── */
+
+/** Situações do cliente novo, antes de fechar: as de pré-venda e venda. */
+export const SITUACOES_ATENDIMENTO = ["qualificar", "projeto_venda", "em_negociacao", "carteira_futura"] as const satisfies readonly ChaveSituacao[];
+export type SituacaoAtendimento = (typeof SITUACOES_ATENDIMENTO)[number];
+export const ehSituacaoAtendimento = (v: unknown): v is SituacaoAtendimento =>
+  typeof v === "string" && (SITUACOES_ATENDIMENTO as readonly string[]).includes(v);
+
+export const MOTIVOS_CANCELAMENTO = { comprou_outra_loja: "Comprou em outra loja", outro_motivo: "Outro motivo" } as const;

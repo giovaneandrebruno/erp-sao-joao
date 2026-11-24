@@ -2,12 +2,13 @@ import { Cartao, Selo, inputCls, estiloBotao } from "@/components/ui";
 import { JanelaBotao } from "@/components/janela";
 import { BotaoExcluir } from "@/components/acoes";
 import { Icone } from "@/components/icones";
-import { dataHora } from "@/lib/format";
+import { dataHora, hojeISO } from "@/lib/format";
 import { TIPOS_DOCUMENTO, tamanhoLegivel, type TipoDocumento } from "@/lib/documentos";
-import { ASSINATURAS, COR_PAGAMENTO, ROTULO_PAGAMENTO, nomeEtapa, situacaoAssinatura, type Etapa, type StatusPagamento } from "@/lib/processo";
+import { ASSINATURAS, COR_PAGAMENTO, ROTULO_PAGAMENTO, SITUACOES, SITUACOES_ATENDIMENTO, nomeEtapa, situacaoAssinatura, type Etapa, type StatusPagamento } from "@/lib/processo";
+import { Botao, Campo } from "@/components/ui";
 import { FormDocumento } from "./pasta-form";
 import { Briefing, type BriefingDoCliente } from "./briefing";
-import { adicionarAnotacao, devolverPasta, editarAnotacao, excluirAnotacao, excluirDocumento, marcarPastaCorrigida } from "./pasta-actions";
+import { adicionarAnotacao, devolverPasta, editarAnotacao, excluirAnotacao, excluirDocumento, marcarPastaCorrigida, salvarAtendimento } from "./pasta-actions";
 
 export type DocumentoDaPasta = {
   id: string; tipo: string; descricao: string | null; nome_arquivo: string; tamanho: number | null;
@@ -23,6 +24,7 @@ export type ProcessoDaPasta = {
   pagamentoCombinado: { pedidoId: string; numero: number; texto: string | null }[];
   devolucoes: { id: string; motivo: string; responsavel: string | null; devolvida_por_nome: string | null; criado_em: string }[];
   pessoas: { user_id: string; nome: string | null; email: string | null }[];
+  atendimento: { situacao: string | null; responsavelId: string | null; prazo: string | null; desde: string | null };
 };
 
 const rotuloTipo = (t: string) => TIPOS_DOCUMENTO[t as TipoDocumento] ?? "Outro";
@@ -39,6 +41,7 @@ export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes
   if (!fechado) {
     return (
       <>
+        <Atendimento clienteId={clienteId} processo={processo} />
         <h2 className="mb-3 text-lg font-semibold">Briefing do cliente novo</h2>
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2"><Briefing clienteId={clienteId} nome={nome} briefing={briefing} colunas={2} /></div>
@@ -137,6 +140,45 @@ export function PastaDoCliente({ clienteId, nome, fechado, documentos, anotacoes
       </div>
       {briefing && <div className="mb-8"><Briefing clienteId={clienteId} nome={nome} briefing={briefing} colunas={3} titulo="Briefing do primeiro atendimento" /></div>}
     </>
+  );
+}
+
+/** Cliente novo: em que situação está o atendimento, com quem e até quando. */
+function Atendimento({ clienteId, processo }: { clienteId: string; processo: ProcessoDaPasta }) {
+  const a = processo.atendimento;
+  const hoje = hojeISO();
+  const vencido = Boolean(a.prazo && a.prazo < hoje);
+  const atual = a.situacao && a.situacao in SITUACOES ? SITUACOES[a.situacao as keyof typeof SITUACOES] : null;
+  return (
+    <Cartao className="mb-8">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-semibold">Situação do atendimento</h3>
+          <p className="text-xs text-stone-500">
+            {atual ? <>{atual.nome}{"detalhe" in atual && atual.detalhe ? ` (${atual.detalhe})` : ""} · cargo: {atual.responsavel}{a.desde ? ` · desde ${dataHora(a.desde)}` : ""}</> : "Escolha a situação, quem cuida e até quando."}
+          </p>
+        </div>
+        {vencido && <Selo cor="red">prazo vencido</Selo>}
+      </div>
+      <form action={salvarAtendimento.bind(null, clienteId)} className="grid gap-3 md:grid-cols-12">
+        <Campo rotulo="Situação" className="md:col-span-4">
+          <select name="atendimento_situacao" defaultValue={a.situacao ?? ""} className={inputCls}>
+            <option value="">—</option>
+            {SITUACOES_ATENDIMENTO.map((k) => <option key={k} value={k}>{SITUACOES[k].nome}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Responsável" className="md:col-span-3">
+          <select name="atendimento_responsavel_id" defaultValue={a.responsavelId ?? ""} className={inputCls}>
+            <option value="">—</option>
+            {processo.pessoas.map((p) => <option key={p.user_id} value={p.user_id}>{p.nome || p.email}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Prazo (vazio = sugestão)" className="md:col-span-3">
+          <input type="date" name="atendimento_prazo" defaultValue={a.prazo ?? ""} className={inputCls} />
+        </Campo>
+        <div className="flex items-end md:col-span-2"><Botao type="submit">Salvar</Botao></div>
+      </form>
+    </Cartao>
   );
 }
 

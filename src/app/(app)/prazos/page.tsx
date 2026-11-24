@@ -22,7 +22,7 @@ export default async function PrazosPage() {
   const { data: pessoas } = await supabase.from("perfis").select("user_id, nome, email");
   const pessoaDe = (uid: string | null) => { const x = pessoas?.find((q) => q.user_id === uid); return x ? x.nome || x.email : "—"; };
   const datasLimite = avisos.filter((a) => a.tipo === "dlp" || a.tipo === "dle");
-  const paradas = avisos.filter((a) => a.tipo === "situacao" || a.tipo === "pasta");
+  const paradas = avisos.filter((a) => a.tipo === "atendimento" || a.tipo === "pasta");
   const linhasAviso = (lista: typeof avisos) =>
     lista.map((a) => (
       <tr key={a.chave}>
@@ -66,9 +66,9 @@ export default async function PrazosPage() {
       <p className="mb-3 text-sm text-stone-500">DLP: prazo para o cliente assinar o executivo. DLE: data limite de entrega. Vencidas e as dos próximos 21 dias.</p>
       <Tabela cabecalho={["Data", "Aviso", "Pedido", "Responsável"]} vazio={!datasLimite.length}>{linhasAviso(datasLimite)}</Tabela>
 
-      <h2 className="mb-3 mt-8 text-lg font-semibold text-red-700">Pedidos parados ({paradas.length})</h2>
-      <p className="mb-3 text-sm text-stone-500">Situações com o prazo vencido e pastas devolvidas para correção.</p>
-      <Tabela cabecalho={["Desde", "O que está parado", "Pedido / cliente", "Responsável"]} vazio={!paradas.length}>{linhasAviso(paradas)}</Tabela>
+      <h2 className="mb-3 mt-8 text-lg font-semibold text-red-700">Parados ({paradas.length})</h2>
+      <p className="mb-3 text-sm text-stone-500">Clientes novos com o prazo do atendimento vencido e pastas devolvidas para correção.</p>
+      <Tabela cabecalho={["Desde", "O que está parado", "Cliente", "Responsável"]} vazio={!paradas.length}>{linhasAviso(paradas)}</Tabela>
     </>
   );
 }
