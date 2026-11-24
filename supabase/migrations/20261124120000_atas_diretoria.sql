@@ -1,10 +1,9 @@
 -- Melhorias tiradas das atas da diretoria:
---  1. Reuniões: atas com ações (responsável, prazo, situação). O que fica aberto passa para a reunião seguinte.
---  2. Comissões: regras editáveis (RT, comercial por faixa de vendas, gerência, projetos, conferente).
---  3. Calculadora de margem no orçamento: markup por perfil do cliente (baixo, médio, alto).
---  4. Prazos em dias úteis: orçamento até 5 dias úteis após o pedido do comercial e entrega até
+--  1. Comissões: regras editáveis (RT, comercial por faixa de vendas, gerência, projetos, conferente).
+--  2. Calculadora de margem no orçamento: markup por perfil do cliente (baixo, médio, alto).
+--  3. Prazos em dias úteis: orçamento até 5 dias úteis após o pedido do comercial e entrega até
 --     60 dias úteis após a medição.
---  5. Funcionários: políticas da empresa e banco de horas.
+--  4. Funcionários: políticas da empresa e banco de horas.
 -- Só cria tabelas e colunas novas e troca duas funções. Não apaga nada.
 
 -- ================================================================ dias úteis
@@ -166,67 +165,6 @@ drop trigger if exists recalcular_marcos_da_medicao on public.pedido_marcos;
 create trigger recalcular_marcos_da_medicao after update of realizado on public.pedido_marcos
   for each row execute function public.recalcular_marcos_da_medicao();
 
--- ================================================================ reuniões e ações
-create table if not exists public.reunioes (
-  id uuid primary key default gen_random_uuid(),
-  numero serial,
-  data date not null default current_date,
-  tipo text not null default 'reuniao' check (tipo in ('pre', 'reuniao', 'pos')),
-  assunto text,
-  participantes text,
-  local text,
-  inicio time,
-  termino time,
-  anotacoes text,
-  criado_por_nome text default public.nome_do_usuario_atual(),
-  criado_em timestamptz not null default now(),
-  atualizado_em timestamptz not null default now()
-);
-create index if not exists reunioes_data_idx on public.reunioes (data desc, numero desc);
-
-create table if not exists public.reuniao_acoes (
-  id uuid primary key default gen_random_uuid(),
-  reuniao_id uuid not null references public.reunioes(id) on delete cascade,
-  descricao text not null check (length(btrim(descricao)) > 0),
-  responsavel text,
-  prazo date,
-  situacao text not null default 'novo' check (situacao in ('novo', 'pendente', 'ok')),
-  concluida_em date,
-  observacao text,
-  criado_por_nome text default public.nome_do_usuario_atual(),
-  criado_em timestamptz not null default now(),
-  atualizado_em timestamptz not null default now()
-);
-create index if not exists reuniao_acoes_reuniao_idx on public.reuniao_acoes (reuniao_id, criado_em);
-create index if not exists reuniao_acoes_abertas_idx on public.reuniao_acoes (situacao) where situacao <> 'ok';
-
--- Reunião nova: as ações "novas" das reuniões anteriores que não foram resolvidas viram "pendentes"
-create or replace function public.reuniao_passar_pendencias() returns trigger
-language plpgsql set search_path = public as $$
-begin
-  update reuniao_acoes a set situacao = 'pendente'
-    from reunioes r
-   where r.id = a.reuniao_id and a.situacao = 'novo' and r.id <> new.id
-     and (r.data < new.data or (r.data = new.data and r.numero < new.numero));
-  return new;
-end $$;
-drop trigger if exists reuniao_passar_pendencias on public.reunioes;
-create trigger reuniao_passar_pendencias after insert on public.reunioes
-  for each row execute function public.reuniao_passar_pendencias();
-
--- Marcar "ok" guarda a data; reabrir apaga
-create or replace function public.reuniao_acao_alterada() returns trigger
-language plpgsql set search_path = public as $$
-begin
-  new.atualizado_em := now();
-  if new.situacao = 'ok' and new.concluida_em is null then new.concluida_em := current_date; end if;
-  if new.situacao <> 'ok' then new.concluida_em := null; end if;
-  return new;
-end $$;
-drop trigger if exists reuniao_acao_alterada on public.reuniao_acoes;
-create trigger reuniao_acao_alterada before insert or update on public.reuniao_acoes
-  for each row execute function public.reuniao_acao_alterada();
-
 -- ================================================================ comissões
 -- tipo: rt = % de cada pedido com arquiteto/indicador; comercial = % das vendas do mês de cada vendedor,
 -- pela faixa; equipe = % das vendas do mês da loja inteira para uma pessoa ou função.
@@ -300,7 +238,7 @@ alter table public.funcionarios
 do $$
 declare v_tab text;
 begin
-  foreach v_tab in array array['reunioes', 'reuniao_acoes', 'comissao_regras', 'comissao_faixas', 'politicas_empresa'] loop
+  foreach v_tab in array array['comissao_regras', 'comissao_faixas', 'politicas_empresa'] loop
     execute format('alter table public.%I enable row level security', v_tab);
     if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = v_tab and policyname = 'so_admin') then
       execute format('create policy "so_admin" on public.%I for all to authenticated using (public.eh_admin()) with check (public.eh_admin())', v_tab);
@@ -312,7 +250,6 @@ begin
     end if;
   end loop;
 end $$;
-grant usage, select on sequence public.reunioes_numero_seq to authenticated;
 
 -- updated_at das tabelas simples
 create or replace function public.tocar_atualizado_em() returns trigger
@@ -325,7 +262,7 @@ end $$;
 do $$
 declare v_tab text;
 begin
-  foreach v_tab in array array['reunioes', 'comissao_regras', 'politicas_empresa'] loop
+  foreach v_tab in array array['comissao_regras', 'politicas_empresa'] loop
     if not exists (select 1 from pg_trigger where tgname = 'tocar_atualizado_em' and tgrelid = format('public.%I', v_tab)::regclass) then
       execute format('create trigger tocar_atualizado_em before update on public.%I for each row execute function public.tocar_atualizado_em()', v_tab);
     end if;
@@ -335,10 +272,10 @@ end $$;
 -- funções de dias úteis: qualquer usuário logado pode usar
 revoke all on function public.pascoa(int), public.eh_feriado(date), public.eh_dia_util(date), public.somar_dias_uteis(date, int) from anon;
 grant execute on function public.pascoa(int), public.eh_feriado(date), public.eh_dia_util(date), public.somar_dias_uteis(date, int) to authenticated;
-revoke all on function public.recalcular_marcos_da_medicao(), public.reuniao_passar_pendencias(), public.reuniao_acao_alterada(), public.tocar_atualizado_em() from anon, authenticated;
+revoke all on function public.recalcular_marcos_da_medicao(), public.tocar_atualizado_em() from anon, authenticated;
 
 -- Para desfazer (à mão, se um dia precisar):
--- drop table public.reuniao_acoes, public.reunioes, public.comissao_faixas, public.comissao_regras, public.politicas_empresa;
+-- drop table public.comissao_faixas, public.comissao_regras, public.politicas_empresa;
 -- drop trigger recalcular_marcos_da_medicao on public.pedido_marcos;
 -- alter table public.funcionarios drop column banco_horas_inicio, drop column banco_horas_saldo_inicial;
 -- alter table public.orcamentos drop column solicitado_em, drop column perfil_margem;

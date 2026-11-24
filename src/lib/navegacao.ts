@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios" | "reunioes" | "comissoes";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios" | "comissoes";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -130,14 +130,6 @@ export const NAVEGACAO: Secao[] = [
         ],
       },
       {
-        rotulo: "Reuniões",
-        icone: "reunioes",
-        filhos: [
-          { href: "/reunioes", rotulo: "Atas", dica: "Reuniões da diretoria e o que foi combinado" },
-          { href: "/reunioes/acoes", rotulo: "Ações em aberto", dica: "Tudo que está pendente, de todas as reuniões" },
-        ],
-      },
-      {
         rotulo: "Análises e relatórios",
         icone: "analises",
         filhos: [
@@ -174,7 +166,6 @@ export const ACOES_RAPIDAS: Folha[] = [
   { href: "/compras/pedidos?novo=1", rotulo: "Novo pedido de compra" },
   { href: "/financeiro?novo=1", rotulo: "Novo lançamento financeiro" },
   { href: "/funcionarios?novo=1", rotulo: "Cadastrar funcionário" },
-  { href: "/reunioes?novo=1", rotulo: "Nova reunião (ata)" },
   { href: "/funcionarios/ponto?importar=1", rotulo: "Importar planilha do relógio ponto" },
 ];
 
