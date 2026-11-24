@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -102,6 +102,15 @@ export const NAVEGACAO: Secao[] = [
         ],
       },
       {
+        rotulo: "Funcionários",
+        icone: "funcionarios",
+        filhos: [
+          { href: "/funcionarios", rotulo: "Cadastro", dica: "Dados pessoais, arquivos e anotações de cada pessoa" },
+          { href: "/funcionarios/atestados", rotulo: "Atestados", dica: "Atestados e afastamentos do mês" },
+          { href: "/funcionarios/ponto", rotulo: "Relógio ponto", dica: "Horas batidas no mês e importação da planilha" },
+        ],
+      },
+      {
         rotulo: "Organograma",
         icone: "organograma",
         filhos: [
@@ -146,6 +155,8 @@ export const ACOES_RAPIDAS: Folha[] = [
   { href: "/compras/requisicoes?novo=1", rotulo: "Nova requisição de compra" },
   { href: "/compras/pedidos?novo=1", rotulo: "Novo pedido de compra" },
   { href: "/financeiro?novo=1", rotulo: "Novo lançamento financeiro" },
+  { href: "/funcionarios?novo=1", rotulo: "Cadastrar funcionário" },
+  { href: "/funcionarios/ponto?importar=1", rotulo: "Importar planilha do relógio ponto" },
 ];
 
 const semBusca = (href: string) => href.split("?")[0];
