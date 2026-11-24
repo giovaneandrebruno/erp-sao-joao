@@ -19,7 +19,7 @@ export async function buscarRegistros(termo: string): Promise<Registro[]> {
   const numero = /^#?\d+$/.test(t) ? Number(t.replace("#", "")) : null;
   const like = `%${t}%`;
 
-  const [clientes, orcamentos, pedidos, negociacoes, produtos, fornecedores] = await Promise.all([
+  const [clientes, orcamentos, pedidos, negociacoes, produtos, fornecedores, funcionarios] = await Promise.all([
     supabase.from("clientes").select("id, nome, telefone, cidade").or(`nome.ilike.${like},telefone.ilike.${like},cpf_cnpj.ilike.${like}`).order("nome").limit(5),
     numero != null
       ? supabase.from("orcamentos_resumo").select("id, numero, cliente_nome, total, status").eq("numero", numero).limit(5)
@@ -30,6 +30,10 @@ export async function buscarRegistros(termo: string): Promise<Registro[]> {
     supabase.from("negociacoes").select("id, titulo, etapa, clientes(nome)").ilike("titulo", like).limit(4),
     supabase.from("produtos").select("id, nome, codigo, estoque_atual, unidade_medida").or(`nome.ilike.${like},codigo.ilike.${like}`).order("nome").limit(4),
     supabase.from("fornecedores").select("id, nome, telefone").ilike("nome", like).order("nome").limit(3),
+    // só o administrador enxerga (regra do banco); para os outros volta vazio
+    perfil.papel === "admin"
+      ? supabase.from("funcionarios").select("id, nome, cargo, telefone").or(`nome.ilike.${like},apelido.ilike.${like},cpf.ilike.${like}`).order("nome").limit(4)
+      : Promise.resolve({ data: [] as { id: string; nome: string; cargo: string | null; telefone: string | null }[] }),
   ]);
 
   const r: Registro[] = [];
@@ -42,5 +46,6 @@ export async function buscarRegistros(termo: string): Promise<Registro[]> {
   }
   for (const p of produtos.data ?? []) r.push({ tipo: "Produto", titulo: p.nome, sub: [p.codigo, `${Number(p.estoque_atual)} ${p.unidade_medida}`].filter(Boolean).join(" · "), href: `/estoque/${p.id}` });
   for (const f of fornecedores.data ?? []) r.push({ tipo: "Fornecedor", titulo: f.nome, sub: f.telefone ?? undefined, href: "/fornecedores" });
+  for (const f of funcionarios.data ?? []) r.push({ tipo: "Funcionário", titulo: f.nome, sub: [f.cargo, f.telefone].filter(Boolean).join(" · ") || undefined, href: `/funcionarios/${f.id}` });
   return r.filter((x) => podeAbrir(perfil.papel, x.href));
 }
