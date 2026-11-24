@@ -131,6 +131,19 @@ export default async function ConfiguracoesPage() {
             {campo("validade_orcamento_dias", "Validade do orçamento (dias)")}
             {campo("orcamento_parado_dias", "Avisar orçamento sem resposta após (dias)")}
           </div>
+          <h3 className="mb-1 mt-6 text-sm font-semibold">Markup por perfil do cliente</h3>
+          <p className="mb-3 text-sm text-stone-500">Usado na calculadora de margem do orçamento: o preço de venda é o custo vezes o markup do perfil escolhido.</p>
+          <div className="grid gap-4 md:grid-cols-6">
+            {campo("markup_perfil_baixo", "Perfil baixo (×)")}
+            {campo("markup_perfil_medio", "Perfil médio (×)")}
+            {campo("markup_perfil_alto", "Perfil alto (×)")}
+          </div>
+          <h3 className="mb-1 mt-6 text-sm font-semibold">Prazos em dias úteis</h3>
+          <p className="mb-3 text-sm text-stone-500">Dias úteis = segunda a sexta, sem feriados nacionais. Aparecem em Prazos e no orçamento.</p>
+          <div className="grid gap-4 md:grid-cols-6">
+            {campo("prazo_orcamento_dias_uteis", "Orçamento pronto em até (dias úteis após o pedido do comercial)", "md:col-span-3")}
+            {campo("prazo_entrega_dias_uteis", "Entrega em até (dias úteis após a medição)", "md:col-span-3")}
+          </div>
         </Cartao>
 
         <Cartao>

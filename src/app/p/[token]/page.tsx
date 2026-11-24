@@ -72,7 +72,7 @@ export default async function PropostaPublica({ params }: PageProps<"/p/[token]"
         <p className="texto-gradiente break-words font-mono text-4xl font-semibold tracking-tighter sm:text-5xl">{brl(p.total)}</p>
         <p className="mt-2 text-sm text-stone-500">
           {ROTULOS2.formaPagamento[p.forma_pagamento]}{p.parcelas > 1 ? ` em ${p.parcelas}×` : ""}
-          {p.prazo_entrega_dias ? ` · entrega em ${p.prazo_entrega_dias} dias` : ""}
+          {p.prazo_entrega_dias ? ` · entrega em ${p.prazo_entrega_dias} dias úteis após a medição` : ""}
           {p.validade ? ` · válida até ${data(p.validade)}` : ""}
         </p>
       </section>

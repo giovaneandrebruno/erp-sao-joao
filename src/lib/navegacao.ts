@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios" | "reunioes" | "comissoes";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -91,6 +91,14 @@ export const NAVEGACAO: Secao[] = [
   {
     titulo: "Gestão",
     abas: [
+      {
+        rotulo: "Comissões",
+        icone: "comissoes",
+        filhos: [
+          { href: "/comissoes", rotulo: "Comissões do mês", dica: "Quanto cada pessoa recebe pelas vendas do mês" },
+          { href: "/comissoes/regras", rotulo: "Regras", dica: "Porcentagens e faixas de cada comissão" },
+        ],
+      },
       { rotulo: "Currículos", icone: "curriculos", href: "/curriculos" },
       {
         rotulo: "Financeiro",
@@ -108,6 +116,8 @@ export const NAVEGACAO: Secao[] = [
           { href: "/funcionarios", rotulo: "Cadastro", dica: "Dados pessoais, arquivos e anotações de cada pessoa" },
           { href: "/funcionarios/atestados", rotulo: "Atestados", dica: "Atestados e afastamentos do mês" },
           { href: "/funcionarios/ponto", rotulo: "Relógio ponto", dica: "Horas batidas no mês e importação da planilha" },
+          { href: "/funcionarios/banco-horas", rotulo: "Banco de horas", dica: "Saldo de horas a mais ou a menos de cada pessoa" },
+          { href: "/funcionarios/politicas", rotulo: "Políticas da empresa", dica: "Horários, intervalos, celular e outras regras" },
         ],
       },
       {
@@ -117,6 +127,14 @@ export const NAVEGACAO: Secao[] = [
           { href: "/organograma", rotulo: "Organograma", dica: "Quem responde a quem" },
           { href: "/organograma/carga", rotulo: "Pessoas e carga", dica: "Quem está sobrecarregado e quem tem folga" },
           { href: "/organograma/funcoes", rotulo: "Funções", dica: "O que precisa ser feito e quem faz" },
+        ],
+      },
+      {
+        rotulo: "Reuniões",
+        icone: "reunioes",
+        filhos: [
+          { href: "/reunioes", rotulo: "Atas", dica: "Reuniões da diretoria e o que foi combinado" },
+          { href: "/reunioes/acoes", rotulo: "Ações em aberto", dica: "Tudo que está pendente, de todas as reuniões" },
         ],
       },
       {
@@ -156,6 +174,7 @@ export const ACOES_RAPIDAS: Folha[] = [
   { href: "/compras/pedidos?novo=1", rotulo: "Novo pedido de compra" },
   { href: "/financeiro?novo=1", rotulo: "Novo lançamento financeiro" },
   { href: "/funcionarios?novo=1", rotulo: "Cadastrar funcionário" },
+  { href: "/reunioes?novo=1", rotulo: "Nova reunião (ata)" },
   { href: "/funcionarios/ponto?importar=1", rotulo: "Importar planilha do relógio ponto" },
 ];
 

@@ -68,7 +68,7 @@ export default async function ImprimirOrcamento({ params }: PageProps<"/orcament
         {Number(o.desconto) > 0 && <div>Subtotal {brl(o.subtotal)} · Desconto −{brl(o.desconto)}</div>}
         <div className="text-lg font-semibold">Total {brl(o.total)}</div>
       </div>
-      {o.prazo_entrega_dias && <p>Prazo de entrega: {o.prazo_entrega_dias} dias após a aprovação.</p>}
+      {o.prazo_entrega_dias && <p>Prazo de entrega: {o.prazo_entrega_dias} dias úteis após a medição do ambiente.</p>}
       {o.condicoes_pagamento && <p>Pagamento: {o.condicoes_pagamento}</p>}
       {o.observacoes && <p className="mt-4 whitespace-pre-line">{o.observacoes}</p>}
     </div>

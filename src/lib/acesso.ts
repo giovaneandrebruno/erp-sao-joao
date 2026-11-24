@@ -7,7 +7,7 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
 };
 
 /** Telas que só o administrador abre. */
-export const SO_ADMIN = ["/financeiro", "/comissoes", "/configuracoes", "/equipe", "/relatorios", "/analises", "/historico", "/redes", "/funcionarios"];
+export const SO_ADMIN = ["/financeiro", "/comissoes", "/configuracoes", "/equipe", "/relatorios", "/analises", "/historico", "/redes", "/funcionarios", "/reunioes"];
 
 /** Telas abertas ao montador. */
 export const DO_MONTADOR = ["/conta"];
