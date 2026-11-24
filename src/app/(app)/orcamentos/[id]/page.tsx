@@ -10,6 +10,10 @@ import { ProcurarProduto } from "../procurar";
 import { AcoesLinha, BotaoCancelar, BotaoExcluir, JanelaEditar, LinkEditar } from "@/components/acoes";
 import { CamposOrcamento } from "../campos";
 import { Previsao } from "../previsao";
+import { CalculadoraMargem } from "../margem";
+import { hojeISO } from "@/lib/format";
+import { diasUteisEntre, somarDiasUteis } from "@/lib/dias-uteis";
+import type { PerfilMargem } from "../actions";
 import { ImportarProjeto } from "../importar";
 
 export default async function OrcamentoPage({ params, searchParams }: PageProps<"/orcamentos/[id]">) {
@@ -22,10 +26,10 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
     supabase.from("produtos").select("id, nome, preco_venda, tipo, estoque_atual, unidade_medida").eq("ativo", true).order("nome"),
     supabase.from("pedidos").select("id, numero").eq("orcamento_id", id).maybeSingle(),
     supabase.from("parceiros").select("id, nome, tipo").eq("ativo", true).order("nome"),
-    supabase.from("configuracoes").select("margem_minima, markup_padrao, nome_fantasia, msg_orcamento").single(),
+    supabase.from("configuracoes").select("margem_minima, markup_padrao, nome_fantasia, msg_orcamento, markup_perfil_baixo, markup_perfil_medio, markup_perfil_alto, prazo_orcamento_dias_uteis").single(),
   ]);
   const [{ data: extra }, { data: cli }, site] = await Promise.all([
-    supabase.from("orcamentos").select("token, visualizado_em, aceite_em, aceite_nome, aberturas, ultima_abertura_em").eq("id", id).maybeSingle(),
+    supabase.from("orcamentos").select("token, visualizado_em, aceite_em, aceite_nome, aberturas, ultima_abertura_em, solicitado_em, perfil_margem").eq("id", id).maybeSingle(),
     supabase.from("clientes").select("telefone").eq("id", o?.cliente_id ?? "").maybeSingle(),
     enderecoDoSite(),
   ]);
@@ -36,6 +40,18 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
     ? preencher(cfg?.msg_orcamento ?? "{link}", { cliente: o.cliente_nome?.split(" ")[0], empresa: cfg?.nome_fantasia, valor: brl(o.total), link: linkProposta })
     : undefined;
   const whats = linkWhats(cli?.telefone, msgWhats);
+  const markupPadrao = Number(cfg?.markup_padrao ?? 1);
+  const markups = {
+    baixo: Number(cfg?.markup_perfil_baixo) || markupPadrao,
+    medio: Number(cfg?.markup_perfil_medio) || markupPadrao,
+    alto: Number(cfg?.markup_perfil_alto) || markupPadrao,
+  };
+  const perfil = (extra?.perfil_margem ?? null) as PerfilMargem | null;
+  const markupEmUso = perfil ? markups[perfil] : markupPadrao;
+  // prazo para o orçamento ficar pronto: X dias úteis depois do pedido do comercial
+  const hoje = hojeISO();
+  const entregarAte = extra?.solicitado_em ? somarDiasUteis(extra.solicitado_em, Number(cfg?.prazo_orcamento_dias_uteis ?? 5)) : null;
+  const faltam = entregarAte ? diasUteisEntre(hoje, entregarAte) : null;
   const ambientes = Array.from(new Set((itens ?? []).map((i) => i.ambiente).filter(Boolean))) as string[];
 
   return (
@@ -61,6 +77,10 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
 
       <p className="mb-6 text-sm text-stone-600">
         Cliente: <Link href={`/clientes/${o.cliente_id}`} className="font-medium text-madeira-700 hover:underline">{o.cliente_nome}</Link>
+        {entregarAte && o.status === "rascunho" && (
+          <> · Entregar ao cliente até <strong className={faltam! < 0 ? "text-rosa" : ""}>{data(entregarAte)}</strong>{" "}
+            ({faltam! < 0 ? `${-faltam!} dia(s) útil(eis) de atraso` : faltam === 0 ? "hoje" : `faltam ${faltam} dia(s) útil(eis)`}, {Number(cfg?.prazo_orcamento_dias_uteis ?? 5)} dias úteis após o pedido do comercial)</>
+        )}
         {pedido && <> · Virou o <Link href={`/pedidos/${pedido.id}`} className="font-medium text-madeira-700 hover:underline">pedido #{pedido.numero}</Link></>}
       </p>
 
@@ -120,10 +140,20 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
         <div>
           <Previsao r={o} margemMinima={Number(cfg?.margem_minima ?? 0)} />
           <p className="mt-2 text-xs text-stone-500">Só a equipe vê este quadro. Ele não sai no PDF do cliente.</p>
+          <div className="mt-4">
+            <CalculadoraMargem
+              orcamentoId={id}
+              custo={Number(o.custo_total ?? 0)}
+              venda={Number(o.subtotal ?? 0)}
+              perfil={perfil}
+              markups={markups}
+              editavel={editavel}
+            />
+          </div>
         </div>
       </div>
 
-      {editavel && <div className="mb-4"><ImportarProjeto orcamentoId={id} markup={Number(cfg?.markup_padrao ?? 1)} /></div>}
+      {editavel && <div className="mb-4"><ImportarProjeto orcamentoId={id} markup={markupEmUso} /></div>}
 
       {editavel && (
         <Cartao className="mb-8">
@@ -159,7 +189,7 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
             <div className="flex items-end md:col-span-1"><Botao type="submit">+</Botao></div>
           </form>
           <p className="mt-2 text-xs text-stone-500">
-            Deixe o valor de venda em branco para calcular pelo markup ({Number(cfg?.markup_padrao ?? 1)}× o custo). Produtos do catálogo trazem custo e preço do cadastro.
+            Deixe o valor de venda em branco para calcular pelo markup ({markupEmUso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })}× o custo{perfil ? `, perfil ${perfil === "medio" ? "médio" : perfil}` : ""}). Produtos do catálogo trazem custo e preço do cadastro.
           </p>
         </Cartao>
       )}
@@ -168,7 +198,7 @@ export default async function OrcamentoPage({ params, searchParams }: PageProps<
       <Cartao>
         <form action={atualizarOrcamento.bind(null, id)} className="grid gap-4 md:grid-cols-6">
           <fieldset disabled={!editavel} className="contents">
-            <CamposOrcamento o={o} parceiros={parceiros ?? []} />
+            <CamposOrcamento o={{ ...o, solicitado_em: extra?.solicitado_em ?? null }} parceiros={parceiros ?? []} />
             {editavel && <div className="md:col-span-6"><Botao type="submit">Salvar</Botao></div>}
           </fieldset>
         </form>

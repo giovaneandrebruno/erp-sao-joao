@@ -6,7 +6,7 @@
  */
 export type Icone =
   | "painel" | "vendas" | "clientes" | "pedidos" | "producao" | "estoque" | "compras"
-  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios";
+  | "financeiro" | "analises" | "equipe" | "configuracoes" | "importar" | "agenda" | "curriculos" | "organograma" | "melhorias" | "historico" | "redes" | "funcionarios" | "comissoes";
 
 export type Folha = { href: string; rotulo: string; dica?: string };
 export type Aba = { rotulo: string; icone: Icone; href?: string; filhos?: Folha[] };
@@ -91,6 +91,14 @@ export const NAVEGACAO: Secao[] = [
   {
     titulo: "Gestão",
     abas: [
+      {
+        rotulo: "Comissões",
+        icone: "comissoes",
+        filhos: [
+          { href: "/comissoes", rotulo: "Comissões do mês", dica: "Quanto cada pessoa recebe pelas vendas do mês" },
+          { href: "/comissoes/regras", rotulo: "Regras", dica: "Porcentagens e faixas de cada comissão" },
+        ],
+      },
       { rotulo: "Currículos", icone: "curriculos", href: "/curriculos" },
       {
         rotulo: "Financeiro",
@@ -108,6 +116,8 @@ export const NAVEGACAO: Secao[] = [
           { href: "/funcionarios", rotulo: "Cadastro", dica: "Dados pessoais, arquivos e anotações de cada pessoa" },
           { href: "/funcionarios/atestados", rotulo: "Atestados", dica: "Atestados e afastamentos do mês" },
           { href: "/funcionarios/ponto", rotulo: "Relógio ponto", dica: "Horas batidas no mês e importação da planilha" },
+          { href: "/funcionarios/banco-horas", rotulo: "Banco de horas", dica: "Saldo de horas a mais ou a menos de cada pessoa" },
+          { href: "/funcionarios/politicas", rotulo: "Políticas da empresa", dica: "Horários, intervalos, celular e outras regras" },
         ],
       },
       {

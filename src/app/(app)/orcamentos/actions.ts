@@ -35,6 +35,7 @@ function cabecalhoBase(form: FormData) {
     unidade: (texto(form, "unidade") ?? "marcenaria") as "marcenaria" | "loja",
     validade: texto(form, "validade"),
     prazo_entrega_dias: numero(form, "prazo_entrega_dias"),
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(texto(form, "solicitado_em") ?? "") ? { solicitado_em: texto(form, "solicitado_em") } : {}),
     desconto: numero(form, "desconto") ?? 0,
     condicoes_pagamento: texto(form, "condicoes_pagamento"),
     observacoes: texto(form, "observacoes"),
@@ -74,8 +75,7 @@ export async function adicionarItem(orcamentoId: string, form: FormData) {
     custo ??= Number(produto?.custo ?? 0);
   }
   if (preco === null && custo !== null) {
-    const { data: cfg } = await supabase.from("configuracoes").select("markup_padrao").single();
-    preco = Math.round(custo * Number(cfg?.markup_padrao ?? 1) * 100) / 100;
+    preco = Math.round(custo * (await markupDoOrcamento(orcamentoId)) * 100) / 100;
   }
 
   const { error } = await supabase.from("orcamento_itens").insert({
@@ -135,8 +135,7 @@ export async function aprovar(id: string) {
 
 export async function importarItens(orcamentoId: string, linhas: import("@/lib/importar").LinhaImportada[]) {
   const supabase = await createClient();
-  const { data: cfg } = await supabase.from("configuracoes").select("markup_padrao").single();
-  const markup = Number(cfg?.markup_padrao ?? 1);
+  const markup = await markupDoOrcamento(orcamentoId);
   const { data: ult } = await supabase.from("orcamento_itens").select("ordem").eq("orcamento_id", orcamentoId).order("ordem", { ascending: false }).limit(1).maybeSingle();
   const base = Number(ult?.ordem ?? 0);
   const { error } = await supabase.from("orcamento_itens").insert(
@@ -153,4 +152,43 @@ export async function importarItens(orcamentoId: string, linhas: import("@/lib/i
   if (error) return error.message;
   revalidatePath(`/orcamentos/${orcamentoId}`);
   return null;
+}
+
+export type PerfilMargem = "baixo" | "medio" | "alto";
+const PERFIS: PerfilMargem[] = ["baixo", "medio", "alto"];
+
+/** Markup usado para sugerir o preço: o do perfil do cliente escolhido no orçamento, ou o padrão. */
+async function markupDoOrcamento(orcamentoId: string) {
+  const supabase = await createClient();
+  const [{ data: cfg }, { data: orc }] = await Promise.all([
+    supabase.from("configuracoes").select("markup_padrao, markup_perfil_baixo, markup_perfil_medio, markup_perfil_alto").single(),
+    supabase.from("orcamentos").select("perfil_margem").eq("id", orcamentoId).maybeSingle(),
+  ]);
+  const perfil = orc?.perfil_margem as PerfilMargem | null | undefined;
+  const doPerfil = perfil ? Number(cfg?.[`markup_perfil_${perfil}` as const]) : 0;
+  return doPerfil > 0 ? doPerfil : Number(cfg?.markup_padrao ?? 1);
+}
+
+/**
+ * Calculadora de margem: escolhe o perfil do cliente e refaz o preço de venda de cada item a partir do custo
+ * (venda = custo × markup do perfil). Itens sem custo ficam como estão.
+ */
+export async function aplicarPerfilMargem(orcamentoId: string, perfil: PerfilMargem) {
+  if (!PERFIS.includes(perfil)) throw new Error("Perfil inválido");
+  const supabase = await createClient();
+  const { data: orc } = await supabase.from("orcamentos").select("status").eq("id", orcamentoId).single();
+  if (orc?.status === "aprovado") throw new Error("Orçamento aprovado não pode mudar de preço.");
+  const { error: e1 } = await supabase.from("orcamentos").update({ perfil_margem: perfil }).eq("id", orcamentoId);
+  if (e1) throw new Error(e1.message);
+  const markup = await markupDoOrcamento(orcamentoId);
+  const { data: itens } = await supabase.from("orcamento_itens").select("id, custo_unitario").eq("orcamento_id", orcamentoId);
+  for (const i of itens ?? []) {
+    if (Number(i.custo_unitario) <= 0) continue;
+    const { error } = await supabase
+      .from("orcamento_itens")
+      .update({ preco_unitario: Math.round(Number(i.custo_unitario) * markup * 100) / 100 })
+      .eq("id", i.id);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath(`/orcamentos/${orcamentoId}`);
 }

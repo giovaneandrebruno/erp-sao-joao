@@ -5,6 +5,7 @@ type Orc = {
   unidade?: string | null;
   validade?: string | null;
   prazo_entrega_dias?: number | null;
+  solicitado_em?: string | null;
   desconto?: number | string | null;
   condicoes_pagamento?: string | null;
   observacoes?: string | null;
@@ -32,8 +33,8 @@ export function CamposOrcamento({ o = {}, parceiros = [], novo = false }: { o?: 
       <Campo rotulo="Válido até" className="md:col-span-2">
         <input name="validade" type="date" defaultValue={o.validade ?? ""} className={inputCls} />
       </Campo>
-      <Campo rotulo="Prazo de entrega (dias)" className="md:col-span-2">
-        <input name="prazo_entrega_dias" type="number" min={0} defaultValue={o.prazo_entrega_dias ?? ""} className={inputCls} />
+      <Campo rotulo="Prazo de entrega (dias úteis após a medição)" className="md:col-span-2">
+        <input name="prazo_entrega_dias" type="number" min={0} defaultValue={o.prazo_entrega_dias ?? ""} placeholder="padrão das configurações" className={inputCls} />
       </Campo>
 
       <Campo rotulo="Vendedor" className="md:col-span-2">
@@ -73,7 +74,10 @@ export function CamposOrcamento({ o = {}, parceiros = [], novo = false }: { o?: 
         <input name="desconto" inputMode="decimal" defaultValue={o.desconto ? String(o.desconto) : ""} className={inputCls} />
       </Campo>
 
-      <Campo rotulo="Condições de pagamento (texto para o cliente)" className="md:col-span-6">
+      <Campo rotulo="Pedido do comercial em" className="md:col-span-2">
+        <input name="solicitado_em" type="date" defaultValue={o.solicitado_em ?? (novo ? new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }) : "")} className={inputCls} />
+      </Campo>
+      <Campo rotulo="Condições de pagamento (texto para o cliente)" className="md:col-span-4">
         <input name="condicoes_pagamento" placeholder="Ex.: 30% de entrada e saldo em 6x no cartão" defaultValue={o.condicoes_pagamento ?? ""} className={inputCls} />
       </Campo>
       <Campo rotulo="Observações" className="md:col-span-6">
