@@ -8,6 +8,7 @@ import { perfilAtual } from "@/lib/perfil";
 import { situacaoPrazo } from "@/lib/pcp";
 import { Icone, type NomeDoIcone } from "@/components/icones";
 import { avisosDoProcesso } from "@/lib/processo-avisos";
+import { PrioridadeProducao } from "./prioridade-producao";
 
 export default async function PainelPage() {
   await connection(); // a data de hoje muda: a tela é sempre montada na hora
@@ -67,6 +68,9 @@ export default async function PainelPage() {
   ];
 
   const [destaque, ...resto] = cards;
+
+  // prioridade de produção: lista curta, em ordem, editada aqui mesmo no Painel
+  const { data: prioridades } = await supabase.from("prioridade_producao").select("id, texto").order("posicao").order("criado_em");
 
   // pedidos para dar atenção: datas limite vencendo, situações com prazo vencido e pastas devolvidas (os seus primeiro)
   const eu = (await perfilAtual())?.user_id ?? null;
@@ -190,6 +194,7 @@ export default async function PainelPage() {
           </div>
         </section>
       )}
+      <PrioridadeProducao itens={prioridades ?? []} />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {atalhos.map((a, i) => (
           <Link
